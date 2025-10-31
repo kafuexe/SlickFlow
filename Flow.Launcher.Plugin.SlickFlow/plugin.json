@@ -1,0 +1,12 @@
+{
+    "ID": "9F598B934F084D4396C55C35B12B84BF",
+    "ActionKeyword": "*",
+    "Name": "SlickFlow",
+    "Description": "a new plugin for Flow",
+    "Author": "AuthorName",
+    "Version": "1.0.0",
+    "Language": "csharp",
+    "Website": "https://github.com/AuthorName/Flow.Launcher.Plugin.SlickFlow",
+    "IcoPath": "icon.png",
+    "ExecuteFileName": "Flow.Launcher.Plugin.SlickFlow.dll"
+}

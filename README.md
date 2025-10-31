@@ -1,2 +1,8 @@
-# SlickFlow
-FlowLuancher Extention that enables users to add commands and aliases similar to slickrun
+Flow.Launcher.Plugin.SlickFlow
+==================
+
+A plugin for the [Flow launcher](https://github.com/Flow-Launcher/Flow.Launcher).
+
+### Usage
+
+    * <arguments>
