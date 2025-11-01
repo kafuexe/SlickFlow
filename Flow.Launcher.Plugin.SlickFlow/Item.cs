@@ -45,15 +45,20 @@ namespace Flow.Launcher.Plugin.SlickFlow
                 || SubTitle.ToLowerInvariant().Contains(query)
                 || Aliases.Any(a => a.ToLowerInvariant().Contains(query));
         }
+
         public void Execute()
         {
             try
             {
+                
 
                 if (!IsUrl(FileName) && !File.Exists(FileName))
                 {
-                    Console.WriteLine($"[Error] File does not exist: '{FileName}'");
-                    return;
+                    string sysPath = Path.Combine(Environment.SystemDirectory, FileName);
+                    if (File.Exists(sysPath))
+                    {
+                        FileName = sysPath;
+                    }
                 }
 
                 var psi = new ProcessStartInfo
@@ -63,12 +68,14 @@ namespace Flow.Launcher.Plugin.SlickFlow
                     WorkingDirectory = string.IsNullOrWhiteSpace(WorkingDir)
                         ? Environment.CurrentDirectory
                         : WorkingDir,
-                    UseShellExecute = true
+                    UseShellExecute = true // Required for URLs or file associations
                 };
 
-                if (RunAs == 1)
+                // Run as admin if requested (only for files, not URLs)
+                if (RunAs == 1 && !IsUrl(FileName))
                     psi.Verb = "runas";
 
+                // Set window style
                 psi.WindowStyle = StartMode switch
                 {
                     1 => ProcessWindowStyle.Minimized,
@@ -84,6 +91,7 @@ namespace Flow.Launcher.Plugin.SlickFlow
                 Console.WriteLine($"[Error] Failed to execute '{FileName}': {ex.Message}");
             }
         }
+
 
         private bool IsUrl(string fileName)
         {

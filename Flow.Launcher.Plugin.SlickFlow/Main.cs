@@ -1,5 +1,6 @@
 using System.Reflection;
 using Flow.Launcher.Plugin.SlickFlow.Stores;
+using System.Text.RegularExpressions;
 
 namespace Flow.Launcher.Plugin.SlickFlow;
 
@@ -48,7 +49,7 @@ public class SlickFlow : IPlugin
     {
         var results = new List<Result>();
         var items = _itemRepo.GetAllItems();
-        var parts = query.Search.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        var parts = SplitArgs(query.Search);
 
         // Handle commands
         if (parts.Length > 0 && _commands.TryGetValue(parts[0].ToLower(), out var handler))
@@ -65,7 +66,14 @@ public class SlickFlow : IPlugin
     #endregion
 
     #region functions
-
+    public static string[] SplitArgs(string command)
+    {
+        var pattern = @"[\""].+?[\""]|[^ ]+";
+        return Regex.Matches(command, pattern)
+                .Cast<Match>()
+                .Select(m => m.Value.Trim('"'))
+                .ToArray();
+    }
     private List<Result> GetResults(string query, List<Item> items)
     {
         var results = new List<Result>();
@@ -77,14 +85,14 @@ public class SlickFlow : IPlugin
         foreach (var (name, score, item) in searchResults)
         {
             string iconPath;
-            if (!item.AliasIcons.TryGetValue(name, out iconPath))
+            if (!item.AliasIcons.TryGetValue(name, out iconPath) || string.IsNullOrEmpty(iconPath))
             {
                 iconPath = IconHelper.SaveIcon(item.FileName, item.Id, name, DataDirectory + _iconFolderDirectory);
-
                 // Store the returned path (default or actual) in AliasIcons
                 item.AliasIcons[name] = iconPath;
                 _itemRepo.UpdateItem(item);
             }
+            
 
             results.Add(new Result()
             {
@@ -202,26 +210,56 @@ public class SlickFlow : IPlugin
 
     private List<Result> HandleAdd(string[] args)
     {
+        args = args.Where(a => !string.IsNullOrWhiteSpace(a)).ToArray();
         var results = new List<Result>();
+
         if (args.Length < 2)
         {
-            results.Add(new Result { Title = "Usage: add <alias1|alias2> <file-or-url> [args] [runas]", Score = int.MaxValue - 1000 });
+            results.Add(new Result
+            {
+                Title = "Usage: add <alias1|alias2> <file-or-url> [args...] [runas]",
+                Score = int.MaxValue - 1000
+            });
             return results;
         }
 
+        // Split aliases
         var aliases = args[0].Split('|', StringSplitOptions.RemoveEmptyEntries)
             .Select(a => a.Trim().ToLowerInvariant())
             .Distinct()
             .ToList();
 
-        var fileOrUrl = args[1];
-        var fileArgs = args.Length >= 3 ? args[2] : string.Empty;
-        var runAs = args.Length >= 4 && int.TryParse(args[3], out int ra) ? ra : 0;
+        // File or URL (remove quotes only if they exist)
+        var fileOrUrl = args[1].Trim();
+        if ((fileOrUrl.StartsWith('"') && fileOrUrl.EndsWith('"')) ||
+            (fileOrUrl.StartsWith('\'') && fileOrUrl.EndsWith('\'')))
+        {
+            fileOrUrl = fileOrUrl.Substring(1, fileOrUrl.Length - 2);
+        }
 
-        // Prevent duplicates
+        string fileArgs = string.Empty;
+        int runAs = 0;
+
+        if (args.Length > 2)
+        {
+            // Check if last argument is integer (runAs)
+            if (int.TryParse(args[^1], out int ra))
+            {
+                runAs = ra;
+                if (args.Length > 3)
+                    fileArgs = string.Join(' ', args.Skip(2).Take(args.Length - 3));
+            }
+            else
+            {
+                fileArgs = string.Join(' ', args.Skip(2));
+            }
+        }
+
+        // Prevent duplicate aliases
         var allItems = _itemRepo.GetAllItems();
         var existing = allItems.SelectMany(i => i.Aliases.Select(a => a.ToLowerInvariant()))
-            .Intersect(aliases).ToList();
+            .Intersect(aliases)
+            .ToList();
 
         if (existing.Any())
         {
@@ -232,6 +270,7 @@ public class SlickFlow : IPlugin
             return results;
         }
 
+        // Create Result with Action to add the item
         results.Add(new Result
         {
             Title = $"Add item: {string.Join(", ", aliases)}",
@@ -247,8 +286,10 @@ public class SlickFlow : IPlugin
                     Aliases = aliases
                 };
 
+                // Add the item to the repository
                 var id = _itemRepo.AddItem(item);
 
+                // Save icons for each alias
                 foreach (var alias in aliases)
                 {
                     string iconPath = IconHelper.SaveIcon(fileOrUrl, id, alias, DataDirectory + _iconFolderDirectory);
@@ -256,6 +297,7 @@ public class SlickFlow : IPlugin
                         item.AliasIcons[alias] = iconPath;
                 }
 
+                // Update the item with icon paths
                 _itemRepo.UpdateItem(item);
                 return true;
             }
@@ -263,6 +305,7 @@ public class SlickFlow : IPlugin
 
         return results;
     }
+
 
     private List<Result> HandleRemove(string[] args)
     {

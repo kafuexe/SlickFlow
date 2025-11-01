@@ -87,6 +87,6 @@ public static class IconHelper
         }
 
         // Return default icon immediately if no existing file
-        return Path.Combine(iconFolder, "default.png");
+        return "";
     }
 }
