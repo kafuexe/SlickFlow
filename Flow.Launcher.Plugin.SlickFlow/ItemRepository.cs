@@ -60,7 +60,7 @@ public class ItemRepository
     {
         var item = GetItemById(itemId);
         if (item == null) throw new InvalidOperationException($"Item with ID {itemId} not found.");
-        if (item.Aliases.RemoveAll(a => string.Equals(a, alias, StringComparison.OrdinalIgnoreCase)) > 0)
+        if (item.RemoveAlias(alias)> 0)
             Save();
     }
 

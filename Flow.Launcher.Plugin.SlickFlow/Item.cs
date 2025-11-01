@@ -1,5 +1,7 @@
 using System.Diagnostics;
-
+using System.Drawing;
+using System.Drawing.Imaging;
+using System.IO;
 namespace Flow.Launcher.Plugin.SlickFlow
 {
     public class Item
@@ -11,9 +13,9 @@ namespace Flow.Launcher.Plugin.SlickFlow
         public int RunAs { get; set; } = 0;
         public int StartMode { get; set; } = 0;
         public string WorkingDir { get; set; } = string.Empty;
-        public string IconPath { get; set; } = string.Empty;
         public int ExecCount { get; set; }
         public List<string> Aliases { get; set; } = new();
+        public Dictionary<string, string> AliasIcons { get; set; } = new();
 
         public Item() { }
         public Item(int id, string fileName, IEnumerable<string>? aliases = null)
@@ -28,9 +30,9 @@ namespace Flow.Launcher.Plugin.SlickFlow
             if (!Aliases.Contains(alias, StringComparer.OrdinalIgnoreCase))
                 Aliases.Add(alias);
         }
-        public void RemoveAlias(string alias)
+        public int RemoveAlias(string alias)
         {
-            Aliases.RemoveAll(a => string.Equals(a, alias, StringComparison.OrdinalIgnoreCase));
+            return Aliases.RemoveAll(a => string.Equals(a, alias, StringComparison.OrdinalIgnoreCase));
         }
         public bool MatchesQuery(string query)
         {

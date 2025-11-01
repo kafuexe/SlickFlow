@@ -11,12 +11,13 @@ public class SlickFlow : IPlugin
     #region Constants
     private PluginInitContext _context;
     private readonly string _dbDirectory = @"Settings\SlickFlow\SlickFlow.json";
+    private readonly string _iconFolderDirectory = @"Settings\SlickFlow\icons\";
     public static string AssemblyDirectory { get; } =
         Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
     private static string DataDirectory { get; } = Path.Combine(AssemblyDirectory, @"..\..\");
     private ItemRepository _itemRepo;
     private delegate List<Result> CommandHandler(string[] args);
-
+    
     private Dictionary<string, CommandHandler> _commands;
 
     #endregion
@@ -75,11 +76,21 @@ public class SlickFlow : IPlugin
 
         foreach (var (name, score, item) in searchResults)
         {
+            string iconPath;
+            if (!item.AliasIcons.TryGetValue(name, out iconPath))
+            {
+                iconPath = IconHelper.SaveIcon(item.FileName, item.Id, name, DataDirectory + _iconFolderDirectory);
+
+                // Store the returned path (default or actual) in AliasIcons
+                item.AliasIcons[name] = iconPath;
+                _itemRepo.UpdateItem(item);
+            }
+
             results.Add(new Result()
             {
                 Title = name,
                 SubTitle = item.SubTitle,
-                IcoPath = item.IconPath,
+                IcoPath = iconPath,
                 Score = score,
                 ContextData = this,
                 Action = e =>
@@ -88,8 +99,8 @@ public class SlickFlow : IPlugin
                     {
                         try
                         {
-                            item.Execute(); // increments ExecCount
-                            _itemRepo.UpdateItem(item); // persist updated ExecCount
+                            item.Execute(); 
+                            _itemRepo.UpdateItem(item); 
                         }
                         catch (Exception ex)
                         {
@@ -98,7 +109,7 @@ public class SlickFlow : IPlugin
                         }
                     });
 
-                    return true; // Flow Laun
+                    return true; 
                 }
             });
         }
@@ -132,45 +143,37 @@ public class SlickFlow : IPlugin
                 int score = 0;
 
                 if (nameLower == queryLower)
-                {
-                    score += 1000;
-                }
+                    score = 1000;
                 else if (nameLower.StartsWith(queryLower))
-                {
-                    score += 800;
-                }
+                    score = 800;
                 else if (nameLower.Contains(queryLower))
-                {
-                    score += 600;
-                }
+                    score = 400; 
                 else if (queryLower.Contains(nameLower))
-                {
-                    score += 500;
-                }
+                    score = 200; 
 
-                // Bonus: shorter names get slight preference (faster typing)
-                score += Math.Max(0, 100 - Math.Abs(nameLower.Length - queryLower.Length) * 5);
-
-                // Optional: typo tolerance (Levenshtein distance)
+                // Bonus: slight preference for shorter names
+                score += Math.Max(0, 50 - Math.Abs(nameLower.Length - queryLower.Length) * 2);
                 int distance = LevenshteinDistance(nameLower, queryLower);
                 if (distance == 1)
-                    score += 100;
+                    score += 50; // small boost for 1 character difference
                 else if (distance == 2)
-                    score += 50;
-
+                    score += 5; // smaller boost for 2 character difference
+                
                 if (score > 0)
                     results.Add((name, score, item));
             }
         }
 
-        // Sort by descending score, then by shortest name (optional)
         return results
-            .OrderByDescending(r => r.Item2)
-            .ThenBy(r => r.Item1.Length)
+            .OrderByDescending(r => r.Item2) // score
+            .ThenBy(r => r.Item1.Length) // shorter names first
             .ToList();
     }
 
+
+
     private int LevenshteinDistance(string a, string b)
+
     {
         int[,] dp = new int[a.Length + 1, b.Length + 1];
 
@@ -191,74 +194,71 @@ public class SlickFlow : IPlugin
 
         return dp[a.Length, b.Length];
     }
+
+
+
     #endregion
     #region Handlers
 
     private List<Result> HandleAdd(string[] args)
     {
         var results = new List<Result>();
-
         if (args.Length < 2)
         {
-            results.Add(new Result
-            {
-                Title = "Usage: add <alias1|alias2> <file> [args] [runas]",
-                SubTitle = "Example: sf add note|notepad notepad.exe"
-            });
+            results.Add(new Result { Title = "Usage: add <alias1|alias2> <file-or-url> [args] [runas]", Score = int.MaxValue - 1000 });
             return results;
         }
 
-        // Normalize and split aliases
-        var aliases = args[0]
-            .Split('|', StringSplitOptions.RemoveEmptyEntries)
-            .Select(a => a.Trim().ToLowerInvariant()) // case-insensitive
+        var aliases = args[0].Split('|', StringSplitOptions.RemoveEmptyEntries)
+            .Select(a => a.Trim().ToLowerInvariant())
             .Distinct()
             .ToList();
 
-        if (aliases.Count == 0)
-        {
-            results.Add(new Result { Title = "No valid aliases provided." });
-            return results;
-        }
+        var fileOrUrl = args[1];
+        var fileArgs = args.Length >= 3 ? args[2] : string.Empty;
+        var runAs = args.Length >= 4 && int.TryParse(args[3], out int ra) ? ra : 0;
 
-        // Check for existing aliases
+        // Prevent duplicates
         var allItems = _itemRepo.GetAllItems();
-        var existing = allItems
-            .SelectMany(i => i.Aliases.Select(a => new { Item = i, Alias = a.ToLowerInvariant() }))
-            .Where(x => aliases.Contains(x.Alias))
-            .ToList();
+        var existing = allItems.SelectMany(i => i.Aliases.Select(a => a.ToLowerInvariant()))
+            .Intersect(aliases).ToList();
 
         if (existing.Any())
         {
-            var duplicates = string.Join(", ", existing.Select(x => x.Alias));
             results.Add(new Result
             {
-                Title = $"Alias already exists: {duplicates}",
-                SubTitle = "Remove it first or choose a different name."
+                Title = $"Alias already exists: {string.Join(", ", existing)}"
             });
             return results;
         }
 
-        // Create new item
-        var file = args[1];
-        var fileArgs = args.Length >= 3 ? args[2] : string.Empty;
-        var runAs = args.Length >= 4 && int.TryParse(args[3], out int ra) ? ra : 0;
-
-        var item = new Item
-        {
-            FileName = file,
-            Arguments = fileArgs,
-            RunAs = runAs,
-            Aliases = aliases
-        };
-
-        // Save item
-        var id = _itemRepo.AddItem(item);
-
         results.Add(new Result
         {
-            Title = $"✅ Added item #{id}: {string.Join(", ", aliases)}",
-            SubTitle = $"File: {file} {fileArgs}".Trim()
+            Title = $"Add item: {string.Join(", ", aliases)}",
+            SubTitle = $"File: {fileOrUrl} {fileArgs}".Trim(),
+            Score = int.MaxValue - 1000,
+            Action = _ =>
+            {
+                var item = new Item
+                {
+                    FileName = fileOrUrl,
+                    Arguments = fileArgs,
+                    RunAs = runAs,
+                    Aliases = aliases
+                };
+
+                var id = _itemRepo.AddItem(item);
+
+                foreach (var alias in aliases)
+                {
+                    string iconPath = IconHelper.SaveIcon(fileOrUrl, id, alias, DataDirectory + _iconFolderDirectory);
+                    if (!string.IsNullOrEmpty(iconPath))
+                        item.AliasIcons[alias] = iconPath;
+                }
+
+                _itemRepo.UpdateItem(item);
+                return true;
+            }
         });
 
         return results;
@@ -269,7 +269,11 @@ public class SlickFlow : IPlugin
         var results = new List<Result>();
         if (args.Length < 1)
         {
-            results.Add(new Result { Title = "Usage: sf remove <alias>" });
+            results.Add(new Result
+            {
+                Title = "Usage: remove <alias>",
+                Score = int.MaxValue - 1000,
+            });
             return results;
         }
 
@@ -277,28 +281,44 @@ public class SlickFlow : IPlugin
         var item = _itemRepo.GetItemByAlias(alias);
         if (item == null)
         {
-            results.Add(new Result { Title = $"No item found with alias '{alias}'" });
+            results.Add(new Result
+            {
+                Title = $"No item found with alias '{alias}'",
+                Score = int.MaxValue - 1000,
+            });
             return results;
         }
 
         if (item.Aliases.Count <= 1)
         {
             results.Add(new Result
-                { Title = $"Item only has one alias. Use 'sf delete {alias}' to delete the item instead." });
+            {
+                Title = $"Item only has one alias. Use 'delete {alias}' to delete the item instead.",
+                Score = int.MaxValue - 1000,
+            });
             return results;
         }
 
         _itemRepo.RemoveAlias(item.Id, alias);
-        results.Add(new Result { Title = $"Removed alias '{alias}' from item {item.Id}" });
+        results.Add(new Result
+        {
+            Title = $"Removed alias '{alias}' from item {item.Id}",
+            Score = int.MaxValue - 1000,
+        });
         return results;
     }
+
     private List<Result> HandleAlias(string[] args)
     {
         var results = new List<Result>();
 
         if (args.Length < 2)
         {
-            results.Add(new Result { Title = "Usage: sf alias <existing-alias-or-id> <newAlias1|newAlias2>" });
+            results.Add(new Result
+            {
+                Title = "Usage: alias <existing-alias-or-id> <newAlias1|newAlias2>",
+                Score = int.MaxValue - 1000,
+            });
             return results;
         }
 
@@ -318,36 +338,50 @@ public class SlickFlow : IPlugin
             .Where(a => !string.IsNullOrWhiteSpace(a))
             .ToList();
 
-        int addedCount = 0;
-        foreach (var alias in newAliases)
+        if (!newAliases.Any())
         {
-            if (!item.Aliases.Contains(alias, StringComparer.OrdinalIgnoreCase))
-            {
-                item.Aliases.Add(alias);
-                addedCount++;
-            }
+            results.Add(new Result { Title = "No valid new aliases provided" });
+            return results;
         }
-
-        if (addedCount > 0)
-            _itemRepo.UpdateItem(item);
 
         results.Add(new Result
         {
-            Title = addedCount > 0
-                ? $"Added {addedCount} alias(es) to item {item.Id}"
-                : "No new aliases added",
-            SubTitle = $"Aliases: {string.Join(", ", item.Aliases)}"
+            Title = $"Add {newAliases.Count} alias(es) to item {item.Id}",
+            SubTitle = $"Existing aliases: {string.Join(", ", item.Aliases)}",
+            Score = int.MaxValue - 1000,
+            Action = _ =>
+            {
+                int addedCount = 0;
+                foreach (var alias in newAliases)
+                {
+                    if (!item.Aliases.Contains(alias, StringComparer.OrdinalIgnoreCase))
+                    {
+                        item.Aliases.Add(alias);
+                        addedCount++;
+                    }
+                }
+
+                if (addedCount > 0)
+                    _itemRepo.UpdateItem(item);
+
+                return true;
+            }
         });
 
         return results;
     }
+
     private List<Result> HandleDelete(string[] args)
     {
         var results = new List<Result>();
 
         if (args.Length < 1)
         {
-            results.Add(new Result { Title = "Usage: sf delete <alias-or-id>" });
+            results.Add(new Result
+            {
+                Title = "Usage: delete <alias-or-id>",
+                Score = int.MaxValue - 1000
+            });
             return results;
         }
 
@@ -366,8 +400,9 @@ public class SlickFlow : IPlugin
         results.Add(new Result
         {
             Title = $"Confirm delete of item {item.Id}?",
+            Score = int.MaxValue - 1000,
             SubTitle = $"Aliases: {string.Join(", ", item.Aliases)}",
-            Action = e =>
+            Action = _ =>
             {
                 _itemRepo.DeleteItem(item.Id);
                 Console.WriteLine($"[Deleted] Item {item.Id} ({item.FileName})");
@@ -377,6 +412,7 @@ public class SlickFlow : IPlugin
 
         return results;
     }
+
     private List<Result> HandleUpdate(string[] args)
     {
         var results = new List<Result>();
@@ -384,11 +420,16 @@ public class SlickFlow : IPlugin
         if (args.Length < 3)
         {
             results.Add(new Result
-                { Title = "Usage: sf update <alias-or-id> <property> <value> [property value] ..." });
+            {
+                Score = int.MaxValue - 1000,
+                Title = "Usage: update <alias-or-id> <property> <value> [property value] ..."
+            });
             return results;
         }
 
         string target = args[0];
+
+        // Just fetch the item for preview, don't change it yet
         Item? item = int.TryParse(target, out int id)
             ? _itemRepo.GetItemById(id)
             : _itemRepo.GetItemByAlias(target);
@@ -399,57 +440,63 @@ public class SlickFlow : IPlugin
             return results;
         }
 
+        // Create a copy of the updates for previewing
+        var updates = new Dictionary<string, string>();
         for (int i = 1; i < args.Length - 1; i += 2)
         {
             string prop = args[i].ToLowerInvariant();
             string val = args[i + 1];
-
-            switch (prop)
-            {
-                case "args":
-                case "arguments":
-                    item.Arguments = val;
-                    break;
-
-                case "runas":
-                    if (int.TryParse(val, out int ra))
-                        item.RunAs = ra;
-                    break;
-
-                case "startmode":
-                    if (int.TryParse(val, out int sm))
-                        item.StartMode = sm;
-                    break;
-
-                case "subtitle":
-                    item.SubTitle = val;
-                    break;
-
-                case "icon":
-                case "iconpath":
-                    item.IconPath = val;
-                    break;
-
-                case "workingdir":
-                case "workdir":
-                    item.WorkingDir = val;
-                    break;
-
-                default:
-                    results.Add(new Result { Title = $"Unknown property '{prop}'" });
-                    break;
-            }
+            updates[prop] = val;
         }
 
-        _itemRepo.UpdateItem(item);
-
+        // Show a result, actual update happens in Action
         results.Add(new Result
         {
-            Title = $"Updated item {item.Id}",
-            SubTitle = $"File: {item.FileName} | Args: {item.Arguments}"
+            Title = $"Update item {item.Id}",
+            Score = int.MaxValue - 1000,
+            SubTitle = $"Properties to update: {string.Join(", ", updates.Select(kv => $"{kv.Key}={kv.Value}"))}",
+            Action = _ =>
+            {
+                foreach (var kv in updates)
+                {
+                    string prop = kv.Key;
+                    string val = kv.Value;
+
+                    switch (prop)
+                    {
+                        case "args":
+                        case "arguments":
+                            item.Arguments = val;
+                            break;
+
+                        case "runas":
+                            if (int.TryParse(val, out int ra))
+                                item.RunAs = ra;
+                            break;
+
+                        case "startmode":
+                            if (int.TryParse(val, out int sm))
+                                item.StartMode = sm;
+                            break;
+
+                        case "subtitle":
+                            item.SubTitle = val;
+                            break;
+
+                        case "workingdir":
+                        case "workdir":
+                            item.WorkingDir = val;
+                            break;
+                    }
+                }
+
+                _itemRepo.UpdateItem(item);
+                return true;
+            }
         });
 
         return results;
     }
+
     #endregion
 }
