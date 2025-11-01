@@ -4,13 +4,15 @@
     <TargetFramework>net7.0-windows</TargetFramework>
     <AssemblyName>Flow.Launcher.Plugin.SlickFlow</AssemblyName>
     <PackageId>Flow.Launcher.Plugin.SlickFlow</PackageId>
-    <Authors>AuthorName</Authors>
-    <PackageProjectUrl>https://github.com/AuthorName/Flow.Launcher.Plugin.SlickFlow</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/AuthorName/Flow.Launcher.Plugin.SlickFlow</RepositoryUrl>
+    <Authors>kafu</Authors>
+    <PackageProjectUrl>https://github.com/kafuexe/SlickFlow</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/kafuexe/SlickFlow</RepositoryUrl>
     <PackageTags>flow-launcher flow-plugin</PackageTags>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
@@ -22,10 +24,14 @@
     <Content Include="plugin.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-  </ItemGroup>
-
-  <ItemGroup>
     <PackageReference Include="Flow.Launcher.Plugin" Version="4.4.0" />
+    <PackageReference Include="System.Runtime" Version="4.3.1" />
   </ItemGroup>
 
+
+<Target Name="PostBuild" AfterTargets="Build">
+  <Copy SourceFiles="$(TargetDir)$(TargetFileName)" DestinationFolder="$(AppData)\FlowLauncher\Plugins\SlickFlow\" />
+  <Copy SourceFiles="$(ProjectDir)plugin.json" DestinationFolder="$(AppData)\FlowLauncher\Plugins\SlickFlow\" />
+  <Copy SourceFiles="$(ProjectDir)icon.ico" DestinationFolder="$(AppData)\FlowLauncher\Plugins\SlickFlow\" />
+</Target>
 </Project>

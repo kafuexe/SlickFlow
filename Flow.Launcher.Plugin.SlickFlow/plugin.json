@@ -1,12 +1,12 @@
 {
-    "ID": "9F598B934F084D4396C55C35B12B84BF",
-    "ActionKeyword": "*",
-    "Name": "SlickFlow",
-    "Description": "a new plugin for Flow",
-    "Author": "AuthorName",
-    "Version": "1.0.0",
-    "Language": "csharp",
-    "Website": "https://github.com/AuthorName/Flow.Launcher.Plugin.SlickFlow",
-    "IcoPath": "icon.png",
-    "ExecuteFileName": "Flow.Launcher.Plugin.SlickFlow.dll"
+  "ID": "5EC88E435441406BA1D5D7F14F640312",
+  "ActionKeyword": "",
+  "Name": "SlickFlow",
+  "Description": "Add Slickrun like commands to FlowLauncher",
+  "Author": "Kafu",
+  "Version": "1.0.0",
+  "Language": "csharp",
+  "Website": "https://github.com/kafuexe/SlickFlow",
+  "IcoPath": "icon.ico",
+  "ExecuteFileName": "Flow.Launcher.Plugin.SlickFlow.dll"
 }
