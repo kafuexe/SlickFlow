@@ -88,7 +88,7 @@ public class SlickFlow : IPlugin
             if (!item.AliasIcons.TryGetValue(name, out iconPath) || string.IsNullOrEmpty(iconPath))
             {
                 iconPath = IconHelper.SaveIcon(item.FileName, item.Id, name, DataDirectory + _iconFolderDirectory);
-                // Store the returned path (default or actual) in AliasIcons
+                // Store the returned path (default or actual) in AliasIcons    
                 item.AliasIcons[name] = iconPath;
                 _itemRepo.UpdateItem(item);
             }
@@ -342,11 +342,15 @@ public class SlickFlow : IPlugin
             return results;
         }
 
-        _itemRepo.RemoveAlias(item.Id, alias);
         results.Add(new Result
         {
-            Title = $"Removed alias '{alias}' from item {item.Id}",
+            Title = $"Remove alias '{alias}' from item {item.Id}",
             Score = int.MaxValue - 1000,
+            Action = _ =>
+            {
+                _itemRepo.RemoveAlias(item.Id, alias);
+                return true;
+            }
         });
         return results;
     }
