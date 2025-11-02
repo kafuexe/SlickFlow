@@ -41,9 +41,18 @@ public class ItemRepository
     }
     public void DeleteItem(int id)
     {
-        var removed = _items.RemoveAll(i => i.Id == id);
-        if (removed > 0)
-            Save();
+        var existing = _items.FindAll(i => i.Id == id);
+        if (existing.Count == 0)
+            return;
+            
+        foreach (var item in existing)
+        {
+            if (!string.IsNullOrWhiteSpace(item.IconPath) && File.Exists(item.IconPath))
+                File.Delete(item.IconPath);
+
+            _items.Remove(item);
+        }
+        Save();
     }
 
     public void AddAlias(int itemId, string alias)
@@ -63,13 +72,11 @@ public class ItemRepository
         if (item.RemoveAlias(alias)> 0)
             Save();
     }
-
     public Item? GetItemByAlias(string alias)
     {
         return _items.FirstOrDefault(i =>
             i.Aliases.Any(a => string.Equals(a, alias, StringComparison.OrdinalIgnoreCase)));
     }
-
     private void Load()
     {
         if (!File.Exists(_path))

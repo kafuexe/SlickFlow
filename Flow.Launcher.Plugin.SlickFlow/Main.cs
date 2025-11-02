@@ -85,11 +85,10 @@ public class SlickFlow : IPlugin
         foreach (var (name, score, item) in searchResults)
         {
             string iconPath;
-            if (!item.AliasIcons.TryGetValue(name, out iconPath) || string.IsNullOrEmpty(iconPath))
+            if (string.IsNullOrEmpty(item.IconPath) || !Path.Exists(item.IconPath))
             {
-                iconPath = IconHelper.SaveIcon(item.FileName, item.Id, name, DataDirectory + _iconFolderDirectory);
-                // Store the returned path (default or actual) in AliasIcons
-                item.AliasIcons[name] = iconPath;
+                iconPath = IconHelper.SaveIcon(item.FileName, item.Id, DataDirectory + _iconFolderDirectory);
+                item.IconPath = iconPath;
                 _itemRepo.UpdateItem(item);
             }
             
@@ -98,7 +97,7 @@ public class SlickFlow : IPlugin
             {
                 Title = name,
                 SubTitle = item.SubTitle,
-                IcoPath = iconPath,
+                IcoPath = item.IconPath,
                 Score = score,
                 ContextData = this,
                 Action = e =>
@@ -289,15 +288,11 @@ public class SlickFlow : IPlugin
                 // Add the item to the repository
                 var id = _itemRepo.AddItem(item);
 
-                // Save icons for each alias
-                foreach (var alias in aliases)
-                {
-                    string iconPath = IconHelper.SaveIcon(fileOrUrl, id, alias, DataDirectory + _iconFolderDirectory);
-                    if (!string.IsNullOrEmpty(iconPath))
-                        item.AliasIcons[alias] = iconPath;
-                }
 
-                // Update the item with icon paths
+                string iconPath = IconHelper.SaveIcon(fileOrUrl, id,  DataDirectory + _iconFolderDirectory);
+                if (!string.IsNullOrEmpty(iconPath))
+                    item.IconPath = iconPath;
+
                 _itemRepo.UpdateItem(item);
                 return true;
             }
@@ -342,11 +337,15 @@ public class SlickFlow : IPlugin
             return results;
         }
 
-        _itemRepo.RemoveAlias(item.Id, alias);
         results.Add(new Result
         {
-            Title = $"Removed alias '{alias}' from item {item.Id}",
+            Title = $"Remove alias '{alias}' from item {item.Id}",
             Score = int.MaxValue - 1000,
+            Action = _ =>
+            {
+                _itemRepo.RemoveAlias(item.Id, alias);
+                return true;
+            }
         });
         return results;
     }
