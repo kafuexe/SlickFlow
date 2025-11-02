@@ -69,7 +69,6 @@ public class ItemRepository
         return _items.FirstOrDefault(i =>
             i.Aliases.Any(a => string.Equals(a, alias, StringComparison.OrdinalIgnoreCase)));
     }
-
     private void Load()
     {
         if (!File.Exists(_path))

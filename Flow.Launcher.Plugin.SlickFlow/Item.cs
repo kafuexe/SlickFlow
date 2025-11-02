@@ -15,7 +15,7 @@ namespace Flow.Launcher.Plugin.SlickFlow
         public string WorkingDir { get; set; } = string.Empty;
         public int ExecCount { get; set; }
         public List<string> Aliases { get; set; } = new();
-        public Dictionary<string, string> AliasIcons { get; set; } = new();
+        public string IconPath { get; set; } = string.Empty;
 
         public Item() { }
         public Item(int id, string fileName, IEnumerable<string>? aliases = null)
@@ -45,7 +45,6 @@ namespace Flow.Launcher.Plugin.SlickFlow
                 || SubTitle.ToLowerInvariant().Contains(query)
                 || Aliases.Any(a => a.ToLowerInvariant().Contains(query));
         }
-
         public void Execute()
         {
             try
@@ -91,8 +90,6 @@ namespace Flow.Launcher.Plugin.SlickFlow
                 Console.WriteLine($"[Error] Failed to execute '{FileName}': {ex.Message}");
             }
         }
-
-
         private bool IsUrl(string fileName)
         {
             return Uri.TryCreate(fileName, UriKind.Absolute, out var uriResult) 

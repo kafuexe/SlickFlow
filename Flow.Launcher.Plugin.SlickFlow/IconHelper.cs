@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
+using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 
@@ -21,17 +22,14 @@ public static class IconHelper
     /// <summary>
     /// Save icon for local exe or website URL
     /// </summary>
-    public static string SaveIcon(string pathOrUrl, int itemId, string alias, string iconFolder)
+    public static async Task<string> SaveIconAsync(string pathOrUrl, int itemId, string iconFolder)
     {
         Directory.CreateDirectory(iconFolder);
-        string safeAlias = alias.Replace(" ", "_").ToLowerInvariant();
-        string iconPath = Path.Combine(iconFolder, $"{itemId}_{safeAlias}.png");
+        string iconPath = Path.Combine(iconFolder, $"{itemId}.png");
 
-        // ✅ If file already exists, just return it
         if (File.Exists(iconPath))
             return iconPath;
 
-        // Local exe
         if (File.Exists(pathOrUrl))
         {
             try
@@ -49,44 +47,57 @@ public static class IconHelper
             }
         }
 
-        // Website URL → fire-and-forget download
-        if (pathOrUrl.StartsWith("http") && !_failedUrls.Contains(pathOrUrl))
+        if (pathOrUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase) && !_failedUrls.Contains(pathOrUrl))
         {
-            _ = Task.Run(async () =>
+            try
             {
-                try
+                var uri = new Uri(pathOrUrl);
+
+                foreach (var faviconUrl in _faviconUrls)
                 {
-                    var uri = new Uri(pathOrUrl);
+                    string requestUrl = faviconUrl.Key == "Default"
+                        ? $"{uri.Scheme}://{uri.Host}/favicon.ico" 
+                        : string.Format(faviconUrl.Value, uri.Host);
 
-                    foreach (var kv in _faviconUrls)
+                    try
                     {
-                        string requestUrl = string.Format(kv.Value, uri.Host);
+                        var response = await _httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Get, requestUrl));
+                        if (response.StatusCode != HttpStatusCode.OK)
+                            continue;
 
-                        try
-                        {
-                            byte[] data = await _httpClient.GetByteArrayAsync(requestUrl);
-                            if (data.Length == 0) continue;
+                        byte[] data = await response.Content.ReadAsByteArrayAsync();
 
-                            using var ms = new MemoryStream(data);
-                            using Icon icon = new Icon(ms);
-                            using var bmp = icon.ToBitmap();
-                            bmp.Save(iconPath, ImageFormat.Png);
+                        using var ms = new MemoryStream(data);
+                        using Icon icon = new Icon(ms);
+                        using var bmp = icon.ToBitmap();
 
-                            // Optionally: notify Flow Launcher to refresh this result
-                            // e.g., _publicAPI?.UpdateResult(result);
-                            break;
-                        }
-                        catch { /* ignore and try next fallback */ }
+                        bmp.Save(iconPath, ImageFormat.Png);
+                        return iconPath; 
+                    }
+                    catch
+                    {
+                        // ignore and try next
                     }
                 }
-                catch
-                {
-                    _failedUrls.Add(pathOrUrl); // don't retry failed URLs
-                }
-            });
+            }
+            catch
+            {
+                _failedUrls.Add(pathOrUrl);
+            }
         }
 
-        // Return default icon immediately if no existing file
-        return "";
+        return string.Empty; 
+    }
+
+    /// <summary>
+    /// Synchronously saves an icon for a local exe or website URL
+    /// </summary>
+    /// <param name="pathOrUrl">Path to executable or URL of website</param>
+    /// <param name="itemId">Unique identifier for the icon</param>
+    /// <param name="iconFolder">Folder where the icon will be saved</param>
+    /// <returns>Path to the saved icon file, or empty string if failed</returns>
+    public static string SaveIcon(string pathOrUrl, int itemId, string iconFolder)
+    {
+        return SaveIconAsync(pathOrUrl, itemId, iconFolder).GetAwaiter().GetResult();
     }
 }
