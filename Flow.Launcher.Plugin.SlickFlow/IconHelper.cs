@@ -19,6 +19,8 @@ public static class IconHelper
         ["Google"] = "https://www.google.com/s2/favicons?domain_url={0}"
     };
 
+    private static Dictionary<string, int> _attempts = new();
+
     /// <summary>
     /// Save icon for local exe or website URL
     /// </summary>
@@ -26,9 +28,18 @@ public static class IconHelper
     {
         Directory.CreateDirectory(iconFolder);
         string iconPath = Path.Combine(iconFolder, $"{itemId}.png");
-
         if (File.Exists(iconPath))
             return iconPath;
+
+        if (_attempts.ContainsKey(pathOrUrl))   
+        {
+            if (_attempts[pathOrUrl] >= 3)
+                return string.Empty;
+            _attempts[pathOrUrl]++;
+        }
+        else
+            _attempts[pathOrUrl] = 1;
+        
 
         if (File.Exists(pathOrUrl))
         {
