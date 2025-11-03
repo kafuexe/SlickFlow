@@ -7,12 +7,12 @@ using System.Net;
 using System.Net.Http;
 using System.Threading.Tasks;
 
-public static class IconHelper
+public class IconHelper
 {
-    private static readonly HttpClient _httpClient = new();
-    private static readonly HashSet<string> _failedUrls = new();
+    private  readonly HttpClient _httpClient = new();
+    private  readonly HashSet<string> _failedUrls = new();
 
-    private static readonly Dictionary<string, string> _faviconUrls = new()
+    private  readonly Dictionary<string, string> _faviconUrls = new()
     {
         ["Default"] = "{0}/favicon.ico",
         ["DuckDuckGo"] = "https://icons.duckduckgo.com/ip2/{0}.ico",
@@ -20,14 +20,20 @@ public static class IconHelper
     };
 
     private static Dictionary<string, int> _attempts = new();
-
+    private readonly string _iconFolder;
     /// <summary>
     /// Save icon for local exe or website URL
     /// </summary>
-    public static async Task<string> SaveIconAsync(string pathOrUrl, int itemId, string iconFolder)
+    /// 
+    public IconHelper(string iconFolder)
     {
+        _iconFolder = iconFolder;
         Directory.CreateDirectory(iconFolder);
-        string iconPath = Path.Combine(iconFolder, $"{itemId}.png");
+    }
+
+    public async Task<string> SaveIconAsync(string pathOrUrl, int itemId)
+    {
+        string iconPath = Path.Combine(_iconFolder, $"{itemId}.png");
         if (File.Exists(iconPath))
             return iconPath;
 
@@ -107,8 +113,8 @@ public static class IconHelper
     /// <param name="itemId">Unique identifier for the icon</param>
     /// <param name="iconFolder">Folder where the icon will be saved</param>
     /// <returns>Path to the saved icon file, or empty string if failed</returns>
-    public static string SaveIcon(string pathOrUrl, int itemId, string iconFolder)
+    public string SaveIcon(string pathOrUrl, int itemId)
     {
-        return SaveIconAsync(pathOrUrl, itemId, iconFolder).GetAwaiter().GetResult();
+        return SaveIconAsync(pathOrUrl, itemId).GetAwaiter().GetResult();
     }
 }

@@ -20,6 +20,7 @@ public class SlickFlow : IPlugin
     private delegate List<Result> CommandHandler(string[] args);
     
     private Dictionary<string, CommandHandler> _commands;
+    private IconHelper _iconHelper = new IconHelper(DataDirectory + @"Settings\SlickFlow\icons\");
 
     #endregion
 
@@ -38,6 +39,7 @@ public class SlickFlow : IPlugin
             ["update"] = HandleUpdate
         };
         _context.API.LogInfo("SlickFlow", "Plugin loaded successfully.");
+        
     }
 
     /// <summary>
@@ -87,7 +89,7 @@ public class SlickFlow : IPlugin
             string iconPath;
             if (string.IsNullOrEmpty(item.IconPath) || !Path.Exists(item.IconPath))
             {
-                iconPath = IconHelper.SaveIcon(item.FileName, item.Id, DataDirectory + _iconFolderDirectory);
+                iconPath = _iconHelper.SaveIcon(item.FileName, item.Id);
                 item.IconPath = iconPath;
                 _itemRepo.UpdateItem(item);
             }
@@ -132,7 +134,7 @@ public class SlickFlow : IPlugin
         if (string.IsNullOrWhiteSpace(query))
             return true;
 
-        if (items == null || items.Count == 0)
+        if (items.Count == 0)
             return true;
         return false;
     }
@@ -150,24 +152,23 @@ public class SlickFlow : IPlugin
                 int score = 0;
 
                 if (nameLower == queryLower)
-                    score = 1000;
-                else if (nameLower.StartsWith(queryLower))
-                    score = 800;
-                else if (nameLower.Contains(queryLower))
-                    score = 400; 
-                else if (queryLower.Contains(nameLower))
-                    score = 200; 
+                    score += 1000;
+                if (nameLower.StartsWith(queryLower))
+                    score += 800;
+                if (queryLower.Contains(nameLower))
+                    score += 400; 
+                if (nameLower.EndsWith(queryLower))
+                    score += 50;
 
-                // Bonus: slight preference for shorter names
-                score += Math.Max(0, 50 - Math.Abs(nameLower.Length - queryLower.Length) * 2);
                 int distance = LevenshteinDistance(nameLower, queryLower);
                 if (distance == 1)
                     score += 50; // small boost for 1 character difference
-                else if (distance == 2)
-                    score += 5; // smaller boost for 2 character difference
-                
+
                 if (score > 0)
+                {
+                    score += Math.Max(0, 50 - Math.Abs(nameLower.Length - queryLower.Length) * 2);
                     results.Add((name, score, item));
+                }
             }
         }
 
@@ -289,7 +290,7 @@ public class SlickFlow : IPlugin
                 var id = _itemRepo.AddItem(item);
 
 
-                string iconPath = IconHelper.SaveIcon(fileOrUrl, id,  DataDirectory + _iconFolderDirectory);
+                string iconPath = _iconHelper.SaveIcon(fileOrUrl, id);
                 if (!string.IsNullOrEmpty(iconPath))
                     item.IconPath = iconPath;
 
