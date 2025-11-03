@@ -1,30 +1,32 @@
 using System.Reflection;
-using Flow.Launcher.Plugin.SlickFlow.Stores;
 using System.Text.RegularExpressions;
 
 namespace Flow.Launcher.Plugin.SlickFlow;
 
 /// <summary>
-/// Flow Launcher plugin for SlickFlow functionality
+/// Flow Launcher plugin for SlickRun-like functionality
 /// </summary>
 public class SlickFlow : IPlugin
 {
     #region Constants
-    private PluginInitContext _context;
-    private readonly string _dbDirectory = @"Settings\SlickFlow\SlickFlow.json";
-    private readonly string _iconFolderDirectory = @"Settings\SlickFlow\icons\";
-    public static string AssemblyDirectory { get; } =
-        Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-    private static string DataDirectory { get; } = Path.Combine(AssemblyDirectory, @"..\..\");
-    private ItemRepository _itemRepo;
     private delegate List<Result> CommandHandler(string[] args);
-    
+    private PluginInitContext _context;
+    private  ItemRepository _itemRepo;
     private Dictionary<string, CommandHandler> _commands;
-
+    private static string AssemblyDirectory { get; } =
+        Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!;
+    private static string DataDirectory { get; } = Path.Combine(AssemblyDirectory, @"..\..\");
+    private readonly string _dbDirectory = @"Settings\SlickFlow\SlickFlow.json";
+    private IconHelper _iconHelper = new IconHelper(DataDirectory + @"Settings\SlickFlow\icons\");
+    private readonly string _slickFlowIcon = Path.Combine(AssemblyDirectory, "icon.ico");
     #endregion
 
     #region IPlugin Api
 
+    /// <summary>
+    /// Initializes the plugin with the provided initialization context.
+    /// </summary>
+    /// <param name="context">The plugin initialization context.</param>
     public void Init(PluginInitContext context)
     {
         _context = context;
@@ -38,6 +40,7 @@ public class SlickFlow : IPlugin
             ["update"] = HandleUpdate
         };
         _context.API.LogInfo("SlickFlow", "Plugin loaded successfully.");
+        
     }
 
     /// <summary>
@@ -66,11 +69,10 @@ public class SlickFlow : IPlugin
     #endregion
 
     #region functions
-    public static string[] SplitArgs(string command)
+    private static string[] SplitArgs(string command)
     {
         var pattern = @"[\""].+?[\""]|[^ ]+";
         return Regex.Matches(command, pattern)
-                .Cast<Match>()
                 .Select(m => m.Value.Trim('"'))
                 .ToArray();
     }
@@ -87,7 +89,7 @@ public class SlickFlow : IPlugin
             string iconPath;
             if (string.IsNullOrEmpty(item.IconPath) || !Path.Exists(item.IconPath))
             {
-                iconPath = IconHelper.SaveIcon(item.FileName, item.Id, DataDirectory + _iconFolderDirectory);
+                iconPath = _iconHelper.SaveIcon(item.FileName, item.Id);
                 item.IconPath = iconPath;
                 _itemRepo.UpdateItem(item);
             }
@@ -100,7 +102,7 @@ public class SlickFlow : IPlugin
                 IcoPath = item.IconPath,
                 Score = score,
                 ContextData = this,
-                Action = e =>
+                Action = _ =>
                 {
                     Task.Run(() =>
                     {
@@ -132,7 +134,7 @@ public class SlickFlow : IPlugin
         if (string.IsNullOrWhiteSpace(query))
             return true;
 
-        if (items == null || items.Count == 0)
+        if (items.Count == 0)
             return true;
         return false;
     }
@@ -150,24 +152,23 @@ public class SlickFlow : IPlugin
                 int score = 0;
 
                 if (nameLower == queryLower)
-                    score = 1000;
-                else if (nameLower.StartsWith(queryLower))
-                    score = 800;
-                else if (nameLower.Contains(queryLower))
-                    score = 400; 
-                else if (queryLower.Contains(nameLower))
-                    score = 200; 
+                    score += 1000;
+                if (nameLower.StartsWith(queryLower))
+                    score += 800;
+                if (queryLower.Contains(nameLower))
+                    score += 400; 
+                if (nameLower.EndsWith(queryLower))
+                    score += 50;
 
-                // Bonus: slight preference for shorter names
-                score += Math.Max(0, 50 - Math.Abs(nameLower.Length - queryLower.Length) * 2);
                 int distance = LevenshteinDistance(nameLower, queryLower);
                 if (distance == 1)
                     score += 50; // small boost for 1 character difference
-                else if (distance == 2)
-                    score += 5; // smaller boost for 2 character difference
-                
+
                 if (score > 0)
+                {
+                    score += Math.Max(0, 50 - Math.Abs(nameLower.Length - queryLower.Length) * 2);
                     results.Add((name, score, item));
+                }
             }
         }
 
@@ -217,7 +218,8 @@ public class SlickFlow : IPlugin
             results.Add(new Result
             {
                 Title = "Usage: add <alias1|alias2> <file-or-url> [args...] [runas]",
-                Score = int.MaxValue - 1000
+                Score = int.MaxValue - 1000,
+                IcoPath = _slickFlowIcon
             });
             return results;
         }
@@ -264,7 +266,8 @@ public class SlickFlow : IPlugin
         {
             results.Add(new Result
             {
-                Title = $"Alias already exists: {string.Join(", ", existing)}"
+                Title = $"Alias already exists: {string.Join(", ", existing)}",
+                IcoPath = _slickFlowIcon
             });
             return results;
         }
@@ -275,6 +278,7 @@ public class SlickFlow : IPlugin
             Title = $"Add item: {string.Join(", ", aliases)}",
             SubTitle = $"File: {fileOrUrl} {fileArgs}".Trim(),
             Score = int.MaxValue - 1000,
+            IcoPath = _slickFlowIcon,
             Action = _ =>
             {
                 var item = new Item
@@ -286,14 +290,7 @@ public class SlickFlow : IPlugin
                 };
 
                 // Add the item to the repository
-                var id = _itemRepo.AddItem(item);
-
-
-                string iconPath = IconHelper.SaveIcon(fileOrUrl, id,  DataDirectory + _iconFolderDirectory);
-                if (!string.IsNullOrEmpty(iconPath))
-                    item.IconPath = iconPath;
-
-                _itemRepo.UpdateItem(item);
+                _itemRepo.AddItem(item);
                 return true;
             }
         });
@@ -311,6 +308,7 @@ public class SlickFlow : IPlugin
             {
                 Title = "Usage: remove <alias>",
                 Score = int.MaxValue - 1000,
+                IcoPath = _slickFlowIcon
             });
             return results;
         }
@@ -323,6 +321,7 @@ public class SlickFlow : IPlugin
             {
                 Title = $"No item found with alias '{alias}'",
                 Score = int.MaxValue - 1000,
+                IcoPath = _slickFlowIcon
             });
             return results;
         }
@@ -333,6 +332,7 @@ public class SlickFlow : IPlugin
             {
                 Title = $"Item only has one alias. Use 'delete {alias}' to delete the item instead.",
                 Score = int.MaxValue - 1000,
+                IcoPath = _slickFlowIcon
             });
             return results;
         }
@@ -341,6 +341,7 @@ public class SlickFlow : IPlugin
         {
             Title = $"Remove alias '{alias}' from item {item.Id}",
             Score = int.MaxValue - 1000,
+            IcoPath = _slickFlowIcon,
             Action = _ =>
             {
                 _itemRepo.RemoveAlias(item.Id, alias);
@@ -360,6 +361,7 @@ public class SlickFlow : IPlugin
             {
                 Title = "Usage: alias <existing-alias-or-id> <newAlias1|newAlias2>",
                 Score = int.MaxValue - 1000,
+                IcoPath = _slickFlowIcon
             });
             return results;
         }
@@ -371,7 +373,8 @@ public class SlickFlow : IPlugin
 
         if (item == null)
         {
-            results.Add(new Result { Title = $"No item found with '{target}'" });
+            results.Add(new Result { Title = $"No item found with '{target}'",
+                IcoPath = _slickFlowIcon, Score = int.MaxValue - 1000 });    
             return results;
         }
 
@@ -382,7 +385,8 @@ public class SlickFlow : IPlugin
 
         if (!newAliases.Any())
         {
-            results.Add(new Result { Title = "No valid new aliases provided" });
+            results.Add(new Result { Title = "No valid new aliases provided", IcoPath = _slickFlowIcon,
+                Score = int.MaxValue - 1000 });
             return results;
         }
 
@@ -391,6 +395,7 @@ public class SlickFlow : IPlugin
             Title = $"Add {newAliases.Count} alias(es) to item {item.Id}",
             SubTitle = $"Existing aliases: {string.Join(", ", item.Aliases)}",
             Score = int.MaxValue - 1000,
+            IcoPath = _slickFlowIcon,
             Action = _ =>
             {
                 int addedCount = 0;
@@ -422,7 +427,8 @@ public class SlickFlow : IPlugin
             results.Add(new Result
             {
                 Title = "Usage: delete <alias-or-id>",
-                Score = int.MaxValue - 1000
+                Score = int.MaxValue - 1000,
+                IcoPath = _slickFlowIcon
             });
             return results;
         }
@@ -434,7 +440,7 @@ public class SlickFlow : IPlugin
 
         if (item == null)
         {
-            results.Add(new Result { Title = $"No item found with '{target}'" });
+            results.Add(new Result { Title = $"No item found with '{target}'", IcoPath = _slickFlowIcon, Score = int.MaxValue - 1000 });
             return results;
         }
 
@@ -444,6 +450,7 @@ public class SlickFlow : IPlugin
             Title = $"Confirm delete of item {item.Id}?",
             Score = int.MaxValue - 1000,
             SubTitle = $"Aliases: {string.Join(", ", item.Aliases)}",
+            IcoPath = _slickFlowIcon,
             Action = _ =>
             {
                 _itemRepo.DeleteItem(item.Id);
@@ -464,7 +471,8 @@ public class SlickFlow : IPlugin
             results.Add(new Result
             {
                 Score = int.MaxValue - 1000,
-                Title = "Usage: update <alias-or-id> <property> <value> [property value] ..."
+                Title = "Usage: update <alias-or-id> <property> <value> [property value] ...",
+                IcoPath = _slickFlowIcon
             });
             return results;
         }
@@ -478,7 +486,8 @@ public class SlickFlow : IPlugin
 
         if (item == null)
         {
-            results.Add(new Result { Title = $"No item found with '{target}'" });
+            results.Add(new Result { Title = $"No item found with '{target}'",
+                IcoPath = _slickFlowIcon, Score = int.MaxValue - 1000 });
             return results;
         }
 
@@ -496,6 +505,7 @@ public class SlickFlow : IPlugin
         {
             Title = $"Update item {item.Id}",
             Score = int.MaxValue - 1000,
+            IcoPath = _slickFlowIcon,
             SubTitle = $"Properties to update: {string.Join(", ", updates.Select(kv => $"{kv.Key}={kv.Value}"))}",
             Action = _ =>
             {
