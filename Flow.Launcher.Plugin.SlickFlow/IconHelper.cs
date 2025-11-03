@@ -2,11 +2,12 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.Net;
 
-/// <summary>
-/// Provides helper methods for saving icons from local executables or website URLs.
-/// </summary>
+
 namespace Flow.Launcher.Plugin.SlickFlow
 {
+    /// <summary>
+    /// Provides helper methods for saving icons from local executables or website URLs.
+    /// </summary>
     public class IconHelper
     {
         private readonly HttpClient _httpClient = new();
