@@ -290,14 +290,7 @@ public class SlickFlow : IPlugin
                 };
 
                 // Add the item to the repository
-                var id = _itemRepo.AddItem(item);
-
-
-                string iconPath = _iconHelper.SaveIcon(fileOrUrl, id);
-                if (!string.IsNullOrEmpty(iconPath))
-                    item.IconPath = iconPath;
-
-                _itemRepo.UpdateItem(item);
+                _itemRepo.AddItem(item);
                 return true;
             }
         });
