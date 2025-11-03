@@ -22,6 +22,7 @@ public class SlickFlow : IPlugin
     private Dictionary<string, CommandHandler> _commands;
     private IconHelper _iconHelper = new IconHelper(DataDirectory + @"Settings\SlickFlow\icons\");
 
+    private readonly string _slickFlowIcon = Path.Combine(AssemblyDirectory, "icon.ico");
     #endregion
 
     #region IPlugin Api
@@ -218,7 +219,8 @@ public class SlickFlow : IPlugin
             results.Add(new Result
             {
                 Title = "Usage: add <alias1|alias2> <file-or-url> [args...] [runas]",
-                Score = int.MaxValue - 1000
+                Score = int.MaxValue - 1000,
+                IcoPath = _slickFlowIcon
             });
             return results;
         }
@@ -265,7 +267,8 @@ public class SlickFlow : IPlugin
         {
             results.Add(new Result
             {
-                Title = $"Alias already exists: {string.Join(", ", existing)}"
+                Title = $"Alias already exists: {string.Join(", ", existing)}",
+                IcoPath = _slickFlowIcon
             });
             return results;
         }
@@ -276,6 +279,7 @@ public class SlickFlow : IPlugin
             Title = $"Add item: {string.Join(", ", aliases)}",
             SubTitle = $"File: {fileOrUrl} {fileArgs}".Trim(),
             Score = int.MaxValue - 1000,
+            IcoPath = _slickFlowIcon,
             Action = _ =>
             {
                 var item = new Item
@@ -312,6 +316,7 @@ public class SlickFlow : IPlugin
             {
                 Title = "Usage: remove <alias>",
                 Score = int.MaxValue - 1000,
+                IcoPath = _slickFlowIcon
             });
             return results;
         }
@@ -324,6 +329,7 @@ public class SlickFlow : IPlugin
             {
                 Title = $"No item found with alias '{alias}'",
                 Score = int.MaxValue - 1000,
+                IcoPath = _slickFlowIcon
             });
             return results;
         }
@@ -334,6 +340,7 @@ public class SlickFlow : IPlugin
             {
                 Title = $"Item only has one alias. Use 'delete {alias}' to delete the item instead.",
                 Score = int.MaxValue - 1000,
+                IcoPath = _slickFlowIcon
             });
             return results;
         }
@@ -342,6 +349,7 @@ public class SlickFlow : IPlugin
         {
             Title = $"Remove alias '{alias}' from item {item.Id}",
             Score = int.MaxValue - 1000,
+            IcoPath = _slickFlowIcon,
             Action = _ =>
             {
                 _itemRepo.RemoveAlias(item.Id, alias);
@@ -361,6 +369,7 @@ public class SlickFlow : IPlugin
             {
                 Title = "Usage: alias <existing-alias-or-id> <newAlias1|newAlias2>",
                 Score = int.MaxValue - 1000,
+                IcoPath = _slickFlowIcon
             });
             return results;
         }
@@ -372,7 +381,8 @@ public class SlickFlow : IPlugin
 
         if (item == null)
         {
-            results.Add(new Result { Title = $"No item found with '{target}'" });
+            results.Add(new Result { Title = $"No item found with '{target}'",
+                IcoPath = _slickFlowIcon, Score = int.MaxValue - 1000 });    
             return results;
         }
 
@@ -383,7 +393,8 @@ public class SlickFlow : IPlugin
 
         if (!newAliases.Any())
         {
-            results.Add(new Result { Title = "No valid new aliases provided" });
+            results.Add(new Result { Title = "No valid new aliases provided", IcoPath = _slickFlowIcon,
+                Score = int.MaxValue - 1000 });
             return results;
         }
 
@@ -392,6 +403,7 @@ public class SlickFlow : IPlugin
             Title = $"Add {newAliases.Count} alias(es) to item {item.Id}",
             SubTitle = $"Existing aliases: {string.Join(", ", item.Aliases)}",
             Score = int.MaxValue - 1000,
+            IcoPath = _slickFlowIcon,
             Action = _ =>
             {
                 int addedCount = 0;
@@ -423,7 +435,8 @@ public class SlickFlow : IPlugin
             results.Add(new Result
             {
                 Title = "Usage: delete <alias-or-id>",
-                Score = int.MaxValue - 1000
+                Score = int.MaxValue - 1000,
+                IcoPath = _slickFlowIcon
             });
             return results;
         }
@@ -435,7 +448,7 @@ public class SlickFlow : IPlugin
 
         if (item == null)
         {
-            results.Add(new Result { Title = $"No item found with '{target}'" });
+            results.Add(new Result { Title = $"No item found with '{target}'", IcoPath = _slickFlowIcon, Score = int.MaxValue - 1000 });
             return results;
         }
 
@@ -445,6 +458,7 @@ public class SlickFlow : IPlugin
             Title = $"Confirm delete of item {item.Id}?",
             Score = int.MaxValue - 1000,
             SubTitle = $"Aliases: {string.Join(", ", item.Aliases)}",
+            IcoPath = _slickFlowIcon,
             Action = _ =>
             {
                 _itemRepo.DeleteItem(item.Id);
@@ -465,7 +479,8 @@ public class SlickFlow : IPlugin
             results.Add(new Result
             {
                 Score = int.MaxValue - 1000,
-                Title = "Usage: update <alias-or-id> <property> <value> [property value] ..."
+                Title = "Usage: update <alias-or-id> <property> <value> [property value] ...",
+                IcoPath = _slickFlowIcon
             });
             return results;
         }
@@ -479,7 +494,8 @@ public class SlickFlow : IPlugin
 
         if (item == null)
         {
-            results.Add(new Result { Title = $"No item found with '{target}'" });
+            results.Add(new Result { Title = $"No item found with '{target}'",
+                IcoPath = _slickFlowIcon, Score = int.MaxValue - 1000 });
             return results;
         }
 
@@ -497,6 +513,7 @@ public class SlickFlow : IPlugin
         {
             Title = $"Update item {item.Id}",
             Score = int.MaxValue - 1000,
+            IcoPath = _slickFlowIcon,
             SubTitle = $"Properties to update: {string.Join(", ", updates.Select(kv => $"{kv.Key}={kv.Value}"))}",
             Action = _ =>
             {
