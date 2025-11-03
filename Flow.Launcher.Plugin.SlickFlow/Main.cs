@@ -1,32 +1,32 @@
 using System.Reflection;
-using Flow.Launcher.Plugin.SlickFlow.Stores;
 using System.Text.RegularExpressions;
 
 namespace Flow.Launcher.Plugin.SlickFlow;
 
 /// <summary>
-/// Flow Launcher plugin for SlickFlow functionality
+/// Flow Launcher plugin for SlickRun-like functionality
 /// </summary>
 public class SlickFlow : IPlugin
 {
     #region Constants
-    private PluginInitContext _context;
-    private readonly string _dbDirectory = @"Settings\SlickFlow\SlickFlow.json";
-    private readonly string _iconFolderDirectory = @"Settings\SlickFlow\icons\";
-    public static string AssemblyDirectory { get; } =
-        Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-    private static string DataDirectory { get; } = Path.Combine(AssemblyDirectory, @"..\..\");
-    private ItemRepository _itemRepo;
     private delegate List<Result> CommandHandler(string[] args);
-    
+    private PluginInitContext _context;
+    private  ItemRepository _itemRepo;
     private Dictionary<string, CommandHandler> _commands;
+    private static string AssemblyDirectory { get; } =
+        Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!;
+    private static string DataDirectory { get; } = Path.Combine(AssemblyDirectory, @"..\..\");
+    private readonly string _dbDirectory = @"Settings\SlickFlow\SlickFlow.json";
     private IconHelper _iconHelper = new IconHelper(DataDirectory + @"Settings\SlickFlow\icons\");
-
     private readonly string _slickFlowIcon = Path.Combine(AssemblyDirectory, "icon.ico");
     #endregion
 
     #region IPlugin Api
 
+    /// <summary>
+    /// Initializes the plugin with the provided initialization context.
+    /// </summary>
+    /// <param name="context">The plugin initialization context.</param>
     public void Init(PluginInitContext context)
     {
         _context = context;
@@ -69,11 +69,10 @@ public class SlickFlow : IPlugin
     #endregion
 
     #region functions
-    public static string[] SplitArgs(string command)
+    private static string[] SplitArgs(string command)
     {
         var pattern = @"[\""].+?[\""]|[^ ]+";
         return Regex.Matches(command, pattern)
-                .Cast<Match>()
                 .Select(m => m.Value.Trim('"'))
                 .ToArray();
     }
@@ -103,7 +102,7 @@ public class SlickFlow : IPlugin
                 IcoPath = item.IconPath,
                 Score = score,
                 ContextData = this,
-                Action = e =>
+                Action = _ =>
                 {
                     Task.Run(() =>
                     {
