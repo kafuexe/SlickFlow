@@ -24,10 +24,10 @@ public class ItemRepository
     /// </summary>
     /// <param name="item">The item to add.</param>
     /// <returns>The ID assigned to the added item.</returns>
-    public int AddItem(Item item)
+    public string AddItem(Item item)
     {
-        if (item.Id == 0)
-            item.Id = _items.Count > 0 ? _items.Max(i => i.Id) + 1 : 1;
+        var uuid = Guid.NewGuid().ToString();
+        item.Id = uuid;
 
         _items.Add(item);
         Save();
@@ -39,7 +39,7 @@ public class ItemRepository
     /// </summary>
     /// <param name="id">The unique identifier of the item to retrieve.</param>
     /// <returns>The matching <see cref="Item"/> if found; otherwise, <c>null</c>.</returns>
-    public Item? GetItemById(int id)
+    public Item? GetItemById(string id)
     {
         return _items.FirstOrDefault(i => i.Id == id);
     }
@@ -73,7 +73,7 @@ public class ItemRepository
     /// Deletes the item with the specified ID and removes its associated icon file if it exists.
     /// </summary>
     /// <param name="id">The unique identifier of the item to delete.</param>
-    public void DeleteItem(int id)
+    public void DeleteItem(string id)
     {
         var existing = _items.FindAll(i => i.Id == id);
         if (existing.Count == 0)
@@ -95,7 +95,7 @@ public class ItemRepository
     /// <param name="itemId">The unique identifier of the item to which the alias will be added.</param>
     /// <param name="alias">The alias to add.</param>
     /// <exception cref="InvalidOperationException">Thrown when no item with the specified ID is found.</exception>
-    public void AddAlias(int itemId, string alias)
+    public void AddAlias(string itemId, string alias)
     {
         var item = GetItemById(itemId);
         if (item == null) throw new InvalidOperationException($"Item with ID {itemId} not found.");
@@ -112,7 +112,7 @@ public class ItemRepository
     /// <param name="itemId">The unique identifier of the item.</param>
     /// <param name="alias">The alias to remove from the item.</param>
     /// <exception cref="InvalidOperationException">Thrown when no item with the specified ID is found.</exception>
-    public void RemoveAlias(int itemId, string alias)
+    public void RemoveAlias(string itemId, string alias)
     {
         var item = GetItemById(itemId);
         if (item == null) throw new InvalidOperationException($"Item with ID {itemId} not found.");

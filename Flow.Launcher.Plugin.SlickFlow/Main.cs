@@ -367,10 +367,7 @@ public class SlickFlow : IPlugin
         }
 
         string target = args[0];
-        Item? item = int.TryParse(target, out int id)
-            ? _itemRepo.GetItemById(id)
-            : _itemRepo.GetItemByAlias(target);
-
+        Item? item = _itemRepo.GetItemById(target) ?? _itemRepo.GetItemByAlias(target);
         if (item == null)
         {
             results.Add(new Result { Title = $"No item found with '{target}'",
@@ -434,9 +431,8 @@ public class SlickFlow : IPlugin
         }
 
         string target = args[0];
-        Item? item = int.TryParse(target, out int id)
-            ? _itemRepo.GetItemById(id)
-            : _itemRepo.GetItemByAlias(target);
+        Item? item = _itemRepo.GetItemById(target) ?? _itemRepo.GetItemByAlias(target);
+
 
         if (item == null)
         {
@@ -480,9 +476,7 @@ public class SlickFlow : IPlugin
         string target = args[0];
 
         // Just fetch the item for preview, don't change it yet
-        Item? item = int.TryParse(target, out int id)
-            ? _itemRepo.GetItemById(id)
-            : _itemRepo.GetItemByAlias(target);
+        Item? item = _itemRepo.GetItemById(target) ?? _itemRepo.GetItemByAlias(target);
 
         if (item == null)
         {
