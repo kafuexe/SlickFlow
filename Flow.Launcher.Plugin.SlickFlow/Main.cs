@@ -86,14 +86,13 @@ public class SlickFlow : IPlugin
 
         foreach (var (name, score, item) in searchResults)
         {
-            string iconPath;
-            if (string.IsNullOrEmpty(item.IconPath) || !Path.Exists(item.IconPath))
+            var iconPath = _iconHelper.SaveIcon(item.FileName, item.Id);
+            if (iconPath != item.IconPath)
             {
-                iconPath = _iconHelper.SaveIcon(item.FileName, item.Id);
                 item.IconPath = iconPath;
                 _itemRepo.UpdateItem(item);
             }
-            
+
 
             results.Add(new Result()
             {
@@ -291,6 +290,7 @@ public class SlickFlow : IPlugin
 
                 // Add the item to the repository
                 _itemRepo.AddItem(item);
+
                 return true;
             }
         });
