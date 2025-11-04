@@ -65,7 +65,7 @@ public class IconHelper
             return TryExtractLocalIcon(pathOrUrl, iconPath);
 
         if (Directory.Exists(pathOrUrl))
-            return TryExtractFolderIcon(pathOrUrl);
+            return TryExtractFolderIcon(iconPath);
 
 
         // Website favicon
