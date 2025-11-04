@@ -1,6 +1,7 @@
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Net;
+using System.Text.RegularExpressions;
 
 
 namespace Flow.Launcher.Plugin.SlickFlow
@@ -31,6 +32,7 @@ namespace Flow.Launcher.Plugin.SlickFlow
         {
             _iconFolder = iconFolder;
             Directory.CreateDirectory(iconFolder);
+            _httpClient.Timeout = TimeSpan.FromSeconds(5);
         }
 
         /// <summary>
@@ -73,12 +75,12 @@ namespace Flow.Launcher.Plugin.SlickFlow
                 }
             }
 
-            if (pathOrUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase) && !_failedUrls.Contains(pathOrUrl))
+            if (pathOrUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
             {
+                // Try to download favicon from the website using known patterns
+                var uri = new Uri(pathOrUrl);
                 try
                 {
-                    var uri = new Uri(pathOrUrl);
-
                     foreach (var faviconUrl in _faviconUrls)
                     {
                         string requestUrl = faviconUrl.Key == "Default"
@@ -93,13 +95,9 @@ namespace Flow.Launcher.Plugin.SlickFlow
                                 continue;
 
                             byte[] data = await response.Content.ReadAsByteArrayAsync();
-
-                            using var ms = new MemoryStream(data);
-                            using Icon icon = new Icon(ms);
-                            using var bmp = icon.ToBitmap();
-
-                            bmp.Save(iconPath, ImageFormat.Png);
-                            return iconPath;
+                            if (SaveAsPng(data, iconPath))
+                                return iconPath;
+                            
                         }
                         catch
                         {
@@ -109,7 +107,47 @@ namespace Flow.Launcher.Plugin.SlickFlow
                 }
                 catch
                 {
-                    _failedUrls.Add(pathOrUrl);
+                }
+
+                // If all failed → Try extracting <link rel="icon"> from HTML
+                try
+                {
+                    var htmlResponse = await _httpClient.GetStringAsync(uri);
+                    if (!string.IsNullOrEmpty(htmlResponse))
+                    {
+                        // Find <link ... rel="...icon..." ... href="...">
+                        var match = Regex.Match(htmlResponse,
+                            @"<link[^>]+rel\s*=\s*[""']?[^>]*icon[^>]*[""'][^>]*href\s*=\s*[""']([^""']+)[""']",
+                            RegexOptions.IgnoreCase);
+
+                        if (match.Success)
+                        {
+                            string href = match.Groups[1].Value.Trim();
+                            string resolvedUrl = href.StartsWith("http", StringComparison.OrdinalIgnoreCase)
+                                ? href
+                                : new Uri(uri, href).ToString(); // make absolute
+
+                            try
+                            {
+                                var response =
+                                    await _httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Get, resolvedUrl));
+                                if (response.StatusCode == HttpStatusCode.OK)
+                                {
+                                    byte[] data = await response.Content.ReadAsByteArrayAsync();
+                                    if (SaveAsPng(data, iconPath))
+                                        return iconPath;
+                                }
+                            }
+                            catch
+                            {
+                                // ignore and fall through
+                            }
+                        }
+                    }
+                }
+                catch
+                {
+                    // ignore html fetch errors
                 }
             }
 
@@ -122,6 +160,35 @@ namespace Flow.Launcher.Plugin.SlickFlow
         public string SaveIcon(string pathOrUrl, int itemId)
         {
             return SaveIconAsync(pathOrUrl, itemId).GetAwaiter().GetResult();
+        }
+
+
+        private static bool SaveAsPng(byte[] data, string savePath)
+        {
+            try
+            {
+                using var ms = new MemoryStream(data);
+                // First, try to load as an ICO
+                try
+                {
+                    using Icon icon = new Icon(ms);
+                    using Bitmap bmp = icon.ToBitmap();
+                    bmp.Save(savePath, ImageFormat.Png);
+                    return true;
+                }
+                catch
+                {
+                    ms.Position = 0;
+                    // If ICO failed, try as a regular image (PNG, JPG, etc.)
+                    using Bitmap bmp = new Bitmap(ms);
+                    bmp.Save(savePath, ImageFormat.Png);
+                    return true;
+                }
+            }
+            catch
+            {
+                return false; // Failed to parse/save the image
+            }
         }
     }
 }
