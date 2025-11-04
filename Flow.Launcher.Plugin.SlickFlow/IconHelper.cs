@@ -42,7 +42,7 @@ namespace Flow.Launcher.Plugin.SlickFlow
         /// <param name="pathOrUrl">Local executable path or website URL to retrieve an icon from.</param>
         /// <param name="itemId">Identifier used to name the saved icon file (saved as {itemId}.png).</param>
         /// <returns>A Task containing the full path to the saved PNG, or an empty string if not available.</returns>
-        public async Task<string> SaveIconAsync(string pathOrUrl, int itemId)
+        public async Task<string> SaveIconAsync(string pathOrUrl, string itemId)
         {
             string iconPath = Path.Combine(_iconFolder, $"{itemId}.png");
             if (File.Exists(iconPath))
@@ -157,7 +157,7 @@ namespace Flow.Launcher.Plugin.SlickFlow
         /// <summary>
         /// Synchronously saves an icon for a local exe or website URL
         /// </summary>
-        public string SaveIcon(string pathOrUrl, int itemId)
+        public string SaveIcon(string pathOrUrl, string itemId)
         {
             return SaveIconAsync(pathOrUrl, itemId).GetAwaiter().GetResult();
         }

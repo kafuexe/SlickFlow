@@ -6,7 +6,7 @@ namespace Flow.Launcher.Plugin.SlickFlow
 {
     public class Item
     {
-        public int Id { get; set; }
+        public string Id { get; set; }
         public string Arguments { get; set; } = string.Empty;
         public string FileName { get; set; } = string.Empty;
         public string SubTitle { get; set; } = string.Empty;
@@ -18,7 +18,7 @@ namespace Flow.Launcher.Plugin.SlickFlow
         public string IconPath { get; set; } = string.Empty;
 
         public Item() { }
-        public Item(int id, string fileName, IEnumerable<string>? aliases = null)
+        public Item(string id, string fileName, IEnumerable<string>? aliases = null)
         {
             Id = id;
             FileName = fileName;
