@@ -1,4 +1,6 @@
-namespace Flow.Launcher.Plugin.SlickFlow;
+using Flow.Launcher.Plugin.SlickFlow.Items;
+
+namespace Flow.Launcher.Plugin.SlickFlow.Commands.CommandHandlers;
 
 public class AliasCommandHandler : ICommandHandler
 {

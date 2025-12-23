@@ -1,7 +1,6 @@
-using System;
-using System.Collections.Generic;
+using Flow.Launcher.Plugin.SlickFlow.Items;
 
-namespace Flow.Launcher.Plugin.SlickFlow;
+namespace Flow.Launcher.Plugin.SlickFlow.Commands.CommandHandlers;
 
 public class UpdateCommandHandler : ICommandHandler
 {

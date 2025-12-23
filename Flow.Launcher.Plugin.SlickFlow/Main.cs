@@ -1,5 +1,6 @@
 using System.Reflection;
-using System.Text.RegularExpressions;
+using Flow.Launcher.Plugin.SlickFlow.Items;
+using Flow.Launcher.Plugin.SlickFlow.Utils;
 
 namespace Flow.Launcher.Plugin.SlickFlow;
 

@@ -1,7 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 
-namespace Flow.Launcher.Plugin.SlickFlow;
+namespace Flow.Launcher.Plugin.SlickFlow.items;
 
 public class ItemValidator
 {
@@ -29,7 +29,7 @@ public class ItemValidator
         var allItems = _plugin._itemRepo.GetAllItems();
         var existing = allItems.SelectMany(i => i.Aliases.Select(a => a.ToLowerInvariant()))
             .Intersect(aliases.Select(a => a.ToLowerInvariant()))
-            .ToList();
+            .ToList() as List<string>;
 
         if (existing.Any())
         {

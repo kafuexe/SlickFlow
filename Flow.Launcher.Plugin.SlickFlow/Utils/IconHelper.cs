@@ -4,7 +4,7 @@ using System.Net;
 using System.Text.RegularExpressions;
 
 
-namespace Flow.Launcher.Plugin.SlickFlow
+namespace Flow.Launcher.Plugin.SlickFlow.Utils
 {
     /// <summary>
     /// Provides helper methods for saving icons from local executables or website URLs.
@@ -12,8 +12,6 @@ namespace Flow.Launcher.Plugin.SlickFlow
     public class IconHelper
     {
         private readonly HttpClient _httpClient = new();
-        private readonly HashSet<string> _failedUrls = new();
-
         private readonly Dictionary<string, string> _faviconUrls = new()
         {
             ["Default"] = "{0}/favicon.ico",

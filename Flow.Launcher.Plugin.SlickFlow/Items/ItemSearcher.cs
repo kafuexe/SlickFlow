@@ -1,8 +1,7 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
 
-namespace Flow.Launcher.Plugin.SlickFlow;
+using Flow.Launcher.Plugin.SlickFlow.Items.Abstract;
+
+namespace Flow.Launcher.Plugin.SlickFlow.Items;
 
 public class ItemSearcher : IItemSearcher
 {

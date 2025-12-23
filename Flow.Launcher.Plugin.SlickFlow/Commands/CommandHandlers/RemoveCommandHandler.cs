@@ -1,6 +1,4 @@
-using System.Collections.Generic;
-
-namespace Flow.Launcher.Plugin.SlickFlow;
+namespace Flow.Launcher.Plugin.SlickFlow.Commands.CommandHandlers;
 
 public class RemoveCommandHandler : ICommandHandler
 {
