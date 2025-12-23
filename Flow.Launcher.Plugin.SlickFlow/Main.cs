@@ -1,5 +1,6 @@
 using System.Reflection;
 using Flow.Launcher.Plugin.SlickFlow.Commands;
+using Flow.Launcher.Plugin.SlickFlow.items;
 using Flow.Launcher.Plugin.SlickFlow.Items;
 using Flow.Launcher.Plugin.SlickFlow.Utils;
 
