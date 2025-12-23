@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace Flow.Launcher.Plugin.SlickFlow;
+namespace Flow.Launcher.Plugin.SlickFlow.Commands;
 
 public static class CommandParser
 {
