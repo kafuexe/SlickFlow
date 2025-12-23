@@ -162,6 +162,34 @@ namespace Flow.Launcher.Plugin.SlickFlow
             return SaveIconAsync(pathOrUrl, itemId).GetAwaiter().GetResult();
         }
 
+        /// <summary>
+        /// Sets a custom icon for an item by copying the provided icon file or downloading from URL.
+        /// </summary>
+        /// <param name="iconSource">Path to the icon file or URL to download.</param>
+        /// <param name="itemId">Item ID for naming the saved icon.</param>
+        /// <returns>Path to the saved icon, or empty if failed.</returns>
+        public string SetCustomIcon(string iconSource, string itemId)
+        {
+            string iconPath = Path.Combine(_iconFolder, $"{itemId}.png");
+            try
+            {
+                if (File.Exists(iconSource))
+                {
+                    File.Copy(iconSource, iconPath, true);
+                    return iconPath;
+                }
+                else if (iconSource.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+                {
+                    return SaveIconAsync(iconSource, itemId).GetAwaiter().GetResult();
+                }
+            }
+            catch
+            {
+                // ignore
+            }
+            return string.Empty;
+        }
+
 
         private static bool SaveAsPng(byte[] data, string savePath)
         {
