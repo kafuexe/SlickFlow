@@ -7,7 +7,7 @@ using System.Text.RegularExpressions;
 namespace Flow.Launcher.Plugin.SlickFlow.Utils
 {
     /// <summary>
-    /// Provides helper methods for saving icons from local executables or website URLs.
+    /// Provides helper methods for saving icons from local files, directories, or website URLs.
     /// </summary>
     public class IconHelper
     {
@@ -34,10 +34,10 @@ namespace Flow.Launcher.Plugin.SlickFlow.Utils
         }
 
         /// <summary>
-        /// Asynchronously saves an icon for a local executable file or a website URL and returns
+        /// Asynchronously saves an icon for a local file, directory, or website URL and returns
         /// the full path to the saved PNG file; returns an empty string when no icon could be retrieved.
         /// </summary>
-        /// <param name="pathOrUrl">Local executable path or website URL to retrieve an icon from.</param>
+        /// <param name="pathOrUrl">Local file/directory path or website URL to retrieve an icon from.</param>
         /// <param name="itemId">Identifier used to name the saved icon file (saved as {itemId}.png).</param>
         /// <returns>A Task containing the full path to the saved PNG, or an empty string if not available.</returns>
         public async Task<string> SaveIconAsync(string pathOrUrl, string itemId)
@@ -55,100 +55,125 @@ namespace Flow.Launcher.Plugin.SlickFlow.Utils
             else
                 _attempts[pathOrUrl] = 1;
 
-
-            if (File.Exists(pathOrUrl))
+            if (File.Exists(pathOrUrl) || Directory.Exists(pathOrUrl))
             {
-                try
-                {
-                    using Icon? icon = Icon.ExtractAssociatedIcon(pathOrUrl);
-                    if (icon == null) return string.Empty;
-
-                    using var bmp = icon.ToBitmap();
-                    bmp.Save(iconPath, ImageFormat.Png);
-                    return iconPath;
-                }
-                catch
-                {
-                    return string.Empty;
-                }
+                return ExtractIconFromPath(pathOrUrl, iconPath);
             }
 
             if (pathOrUrl.StartsWith("http", StringComparison.OrdinalIgnoreCase))
             {
-                // Try to download favicon from the website using known patterns
                 var uri = new Uri(pathOrUrl);
+                string result = await DownloadFaviconFromPatternsAsync(uri, iconPath);
+                if (!string.IsNullOrEmpty(result))
+                    return result;
+
+                return await ExtractIconFromHtmlAsync(uri, iconPath);
+            }
+
+            return string.Empty;
+        }
+
+        /// <summary>
+        /// Extracts and saves an icon from a local file or directory path.
+        /// </summary>
+        /// <param name="path">Path to the file or directory.</param>
+        /// <param name="iconPath">Path where to save the icon.</param>
+        /// <returns>The icon path if successful, otherwise empty string.</returns>
+        private string ExtractIconFromPath(string path, string iconPath)
+        {
+            try
+            {
+                using Icon? icon = Icon.ExtractAssociatedIcon(path);
+                if (icon == null) return string.Empty;
+
+                using var bmp = icon.ToBitmap();
+                bmp.Save(iconPath, ImageFormat.Png);
+                return iconPath;
+            }
+            catch
+            {
+                return string.Empty;
+            }
+        }
+
+        /// <summary>
+        /// Downloads a favicon from known URL patterns.
+        /// </summary>
+        /// <param name="uri">The URI of the website.</param>
+        /// <param name="iconPath">Path where to save the icon.</param>
+        /// <returns>The icon path if successful, otherwise empty string.</returns>
+        private async Task<string> DownloadFaviconFromPatternsAsync(Uri uri, string iconPath)
+        {
+            foreach (var faviconUrl in _faviconUrls)
+            {
+                string requestUrl = faviconUrl.Key == "Default"
+                    ? $"{uri.Scheme}://{uri.Host}/favicon.ico"
+                    : string.Format(faviconUrl.Value, uri.Host);
+
                 try
                 {
-                    foreach (var faviconUrl in _faviconUrls)
+                    var response = await _httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Get, requestUrl));
+                    if (response.StatusCode != HttpStatusCode.OK)
+                        continue;
+
+                    byte[] data = await response.Content.ReadAsByteArrayAsync();
+                    if (SaveAsPng(data, iconPath))
+                        return iconPath;
+                }
+                catch
+                {
+                    // ignore and try next
+                }
+            }
+            return string.Empty;
+        }
+
+        /// <summary>
+        /// Extracts an icon URL from the HTML of a website and downloads it.
+        /// </summary>
+        /// <param name="uri">The URI of the website.</param>
+        /// <param name="iconPath">Path where to save the icon.</param>
+        /// <returns>The icon path if successful, otherwise empty string.</returns>
+        private async Task<string> ExtractIconFromHtmlAsync(Uri uri, string iconPath)
+        {
+            try
+            {
+                var htmlResponse = await _httpClient.GetStringAsync(uri);
+                if (!string.IsNullOrEmpty(htmlResponse))
+                {
+                    // Find <link ... rel="...icon..." ... href="...">
+                    var match = Regex.Match(htmlResponse,
+                        @"<link[^>]+rel\s*=\s*[""']?[^>]*icon[^>]*[""'][^>]*href\s*=\s*[""']([^""']+)[""']",
+                        RegexOptions.IgnoreCase);
+
+                    if (match.Success)
                     {
-                        string requestUrl = faviconUrl.Key == "Default"
-                            ? $"{uri.Scheme}://{uri.Host}/favicon.ico"
-                            : string.Format(faviconUrl.Value, uri.Host);
+                        string href = match.Groups[1].Value.Trim();
+                        string resolvedUrl = href.StartsWith("http", StringComparison.OrdinalIgnoreCase)
+                            ? href
+                            : new Uri(uri, href).ToString(); // make absolute
 
                         try
                         {
-                            var response =
-                                await _httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Get, requestUrl));
-                            if (response.StatusCode != HttpStatusCode.OK)
-                                continue;
-
-                            byte[] data = await response.Content.ReadAsByteArrayAsync();
-                            if (SaveAsPng(data, iconPath))
-                                return iconPath;
-                            
+                            var response = await _httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Get, resolvedUrl));
+                            if (response.StatusCode == HttpStatusCode.OK)
+                            {
+                                byte[] data = await response.Content.ReadAsByteArrayAsync();
+                                if (SaveAsPng(data, iconPath))
+                                    return iconPath;
+                            }
                         }
                         catch
                         {
-                            // ignore and try next
+                            // ignore and fall through
                         }
                     }
-                }
-                catch
-                {
-                }
-
-                // If all failed → Try extracting <link rel="icon"> from HTML
-                try
-                {
-                    var htmlResponse = await _httpClient.GetStringAsync(uri);
-                    if (!string.IsNullOrEmpty(htmlResponse))
-                    {
-                        // Find <link ... rel="...icon..." ... href="...">
-                        var match = Regex.Match(htmlResponse,
-                            @"<link[^>]+rel\s*=\s*[""']?[^>]*icon[^>]*[""'][^>]*href\s*=\s*[""']([^""']+)[""']",
-                            RegexOptions.IgnoreCase);
-
-                        if (match.Success)
-                        {
-                            string href = match.Groups[1].Value.Trim();
-                            string resolvedUrl = href.StartsWith("http", StringComparison.OrdinalIgnoreCase)
-                                ? href
-                                : new Uri(uri, href).ToString(); // make absolute
-
-                            try
-                            {
-                                var response =
-                                    await _httpClient.SendAsync(new HttpRequestMessage(HttpMethod.Get, resolvedUrl));
-                                if (response.StatusCode == HttpStatusCode.OK)
-                                {
-                                    byte[] data = await response.Content.ReadAsByteArrayAsync();
-                                    if (SaveAsPng(data, iconPath))
-                                        return iconPath;
-                                }
-                            }
-                            catch
-                            {
-                                // ignore and fall through
-                            }
-                        }
-                    }
-                }
-                catch
-                {
-                    // ignore html fetch errors
                 }
             }
-
+            catch
+            {
+                // ignore html fetch errors
+            }
             return string.Empty;
         }
 
@@ -176,7 +201,7 @@ namespace Flow.Launcher.Plugin.SlickFlow.Utils
                     File.Copy(iconSource, iconPath, true);
                     return iconPath;
                 }
-                else if (iconSource.StartsWith("http", StringComparison.OrdinalIgnoreCase))
+                if (iconSource.StartsWith("http", StringComparison.OrdinalIgnoreCase))
                 {
                     return SaveIconAsync(iconSource, itemId).GetAwaiter().GetResult();
                 }
