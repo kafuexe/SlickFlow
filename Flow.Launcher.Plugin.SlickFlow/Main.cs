@@ -85,10 +85,10 @@ public class SlickFlow : IPlugin
             {
                 try
                 {
-                    var newIconPath = await _iconHelper.SaveIconAsync(item.FileName, item.Id);
-                    if (newIconPath != item.IconPath)
+                    var iconResult = await _iconHelper.TrySaveIconAsync(item.FileName, item.Id);
+                    if (iconResult.SavedPath != item.IconPath)
                     {
-                        item.IconPath = newIconPath;
+                        item.IconPath = iconResult.SavedPath;
                         _itemRepo.UpdateItem(item);
                     }
                 }
