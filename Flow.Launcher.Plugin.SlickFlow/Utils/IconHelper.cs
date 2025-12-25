@@ -16,48 +16,43 @@ namespace Flow.Launcher.Plugin.SlickFlow.Utils
     public sealed class IconHelper
     {
         #region Native interop
+        private const uint SHGFI_ICON = 0x000000100;
+        private const uint SHGFI_LARGEICON = 0x000000000;
+        private const uint SHGFI_SMALLICON = 0x000000001;
 
-        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
+        [StructLayout(LayoutKind.Sequential)]
         private struct SHFILEINFO
         {
             public IntPtr hIcon;
             public int iIcon;
             public uint dwAttributes;
-
             [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 260)]
             public string szDisplayName;
-
             [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 80)]
             public string szTypeName;
         }
 
-        private const uint SHGFI_ICON               = 0x000000100;
-        private const uint SHGFI_LARGEICON          = 0x000000000;   // 0 = default (large)
-
-        [DllImport("shell32.dll", CharSet = CharSet.Auto)]
+        [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
         private static extern IntPtr SHGetFileInfo(
             string pszPath,
             uint dwFileAttributes,
             ref SHFILEINFO psfi,
             uint cbFileInfo,
-            uint uFlags);
+            uint uFlags
+        );
 
-        [DllImport("user32.dll", SetLastError = true)]
+        [DllImport("user32.dll")]
         private static extern bool DestroyIcon(IntPtr hIcon);
+
         #endregion
 
         #region Fields
 
-        // Shared HttpClient – one per process, thread‑safe.
         private static readonly HttpClient HttpClient = new()
         {
             Timeout = TimeSpan.FromSeconds(5)
         };
-
-        // Retry counter – key = input (path or url), value = attempts made.
         private readonly ConcurrentDictionary<string, int> _attempts = new();
-
-        // Known favicon services.
         private readonly Dictionary<string, string> _faviconUrlPatterns = new()
         {
             // “Default” is handled manually because it needs the scheme.
@@ -67,7 +62,7 @@ namespace Flow.Launcher.Plugin.SlickFlow.Utils
         };
 
         private readonly string _iconFolder;
-        private readonly Action<string>? _log;    // optional host logger
+        private readonly Action<string>? _log;    // optional logger
 
         #endregion
 
@@ -120,7 +115,6 @@ namespace Flow.Launcher.Plugin.SlickFlow.Utils
                 _log?.Invoke($"IconHelper: giving up after {attempts} attempts for \"{pathOrUrl}\"");
                 return (false, string.Empty);
             }
-
             try
             {
                 // Local file / folder ?
@@ -223,6 +217,33 @@ namespace Flow.Launcher.Plugin.SlickFlow.Utils
             return sb.ToString().Trim('.').Trim();
         }
 
+
+        private static Icon? GetShellIcon(string path, bool largeIcon)
+        {
+            SHFILEINFO shinfo = new SHFILEINFO();
+
+            uint flags =
+                SHGFI_ICON |
+                (largeIcon ? SHGFI_LARGEICON : SHGFI_SMALLICON);
+
+            SHGetFileInfo(
+                path,
+                0,
+                ref shinfo,
+                (uint)Marshal.SizeOf(shinfo),
+                flags
+            );
+
+            if (shinfo.hIcon == IntPtr.Zero)
+                return null;
+
+            // Clone so we can destroy original handle
+            Icon icon = (Icon)Icon.FromHandle(shinfo.hIcon).Clone();
+            DestroyIcon(shinfo.hIcon);
+
+            return icon;
+        }
+
         #region Local icon extraction
 
         /// <summary>
@@ -238,41 +259,25 @@ namespace Flow.Launcher.Plugin.SlickFlow.Utils
             // Folder ?
             if (Directory.Exists(path))
             {
-                // Ask the shell for the *folder* icon.
-                SHFILEINFO shfi = new();
-
-                nativeIcon = SHGetFileInfo(
-                path,
-                0, ref shfi, (uint)Marshal.SizeOf(shfi),
-                SHGFI_ICON | SHGFI_LARGEICON);
-
-                if (nativeIcon != IntPtr.Zero)
-                {
-                    // FromHandle only wraps the native handle – we must clone it
-                    // before we destroy the original handle.
-                    using Icon wrapper = Icon.FromHandle(nativeIcon);
-                    sysIcon = (Icon)wrapper.Clone();      // <- owns its own HICON now
-                }
+                sysIcon = GetShellIcon(path, true);
+                if (sysIcon == null)
+                    sysIcon = GetShellIcon(path, false);
             }
-            //  Normal file ?
             else if (File.Exists(path))
             {
-                sysIcon = Icon.ExtractAssociatedIcon(path);   // already a managed copy
+                sysIcon = Icon.ExtractAssociatedIcon(path);  
             }
 
             if (sysIcon == null)
                 return false;
 
-            //  Write to PNG (WPF path + pure‑GDI fallback)
-            using (sysIcon)                    // disposes GDI+ wrapper
+            using (sysIcon)
             {
                 SaveIconToPng(sysIcon, pngPath);
             }
-
             // Release native handle we got from SHGetFileInfo
             if (nativeIcon != IntPtr.Zero)
                 DestroyIcon(nativeIcon);
-
             return true;
         }
         catch (Exception ex) when (!ex.IsCritical())
