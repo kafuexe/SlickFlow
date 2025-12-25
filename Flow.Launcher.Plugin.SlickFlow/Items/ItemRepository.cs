@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace Flow.Launcher.Plugin.SlickFlow;
+namespace Flow.Launcher.Plugin.SlickFlow.Items;
 
 /// <summary>
 /// Provides methods for managing a collection of <see cref="Item"/> objects, including loading, saving, and CRUD operations.
