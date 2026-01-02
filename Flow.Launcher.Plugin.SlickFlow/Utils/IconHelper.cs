@@ -48,10 +48,18 @@ namespace Flow.Launcher.Plugin.SlickFlow.Utils
 
         #region Fields
 
-        private static readonly HttpClient HttpClient = new()
+        private static readonly HttpClient HttpClient = new(
+            new HttpClientHandler
+            {
+                AllowAutoRedirect = true,
+                AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate
+            })
         {
             Timeout = TimeSpan.FromSeconds(5)
         };
+
+        
+
         private readonly ConcurrentDictionary<string, int> _attempts = new();
         private readonly Dictionary<string, string> _faviconUrlPatterns = new()
         {
@@ -79,10 +87,18 @@ namespace Flow.Launcher.Plugin.SlickFlow.Utils
         /// </param>
         public IconHelper(string iconFolder, Action<string>? log = null)
         {
+            
             _iconFolder = Path.GetFullPath(iconFolder);
             Directory.CreateDirectory(_iconFolder);
             _log = log;
         }
+
+        static IconHelper()
+        {   
+            HttpClient.DefaultRequestHeaders.UserAgent.ParseAdd(
+                "Mozilla/5.0 (Windows NT 10.0; IconHelper/1.0)");
+        }
+
         #endregion
 
         #region Public API (async & sync)
@@ -94,69 +110,64 @@ namespace Flow.Launcher.Plugin.SlickFlow.Utils
         /// <param name="itemId">Identifier used for the file name. All illegal file‑name characters are stripped.</param>
         /// <param name="cancellationToken">Optional cancellation token.</param>
         /// <returns><c>true</c> on success, otherwise <c>false</c>.</returns>
-        public async Task<(bool Success, string SavedPath)> TrySaveIconAsync(
-        string pathOrUrl,
-        string itemId,
-        CancellationToken cancellationToken = default)
+       public async Task<(bool Success, string SavedPath)> TrySaveIconAsync(
+            string pathOrUrl,
+            string itemId,
+            CancellationToken cancellationToken = default)
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             string safeFileName = MakeSafeFileName(itemId) + ".png";
             string targetPath   = Path.Combine(_iconFolder, safeFileName);
 
+            // Fast path
             if (File.Exists(targetPath))
                 return (true, targetPath);
 
-            int attempts = _attempts.AddOrUpdate(
-                key: pathOrUrl,
-                addValueFactory: _ => 1,
-                updateValueFactory: (_, cur) => cur + 1);
+            string attemptKey = $"{pathOrUrl}|{safeFileName}";
 
-            if (attempts > 3)
-            {
-                _log?.Invoke($"IconHelper: giving up after {attempts} attempts for \"{pathOrUrl}\"");
-                return (false, string.Empty);
-            }
             try
             {
-                // Local file / folder ?
-                if (File.Exists(pathOrUrl) || Directory.Exists(pathOrUrl))
+                // ---- URL first (cheap check, avoids filesystem hit) ----
+                if (Uri.TryCreate(pathOrUrl, UriKind.Absolute, out Uri? uri) &&
+                    (uri.Scheme.Equals("http", StringComparison.OrdinalIgnoreCase) ||
+                    uri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase)))
+                {
+                    if (await TryDownloadFaviconFromPatternsAsync(uri, targetPath, cancellationToken).ConfigureAwait(false) ||
+                        await TryExtractIconFromHtmlAsync(uri, targetPath, cancellationToken).ConfigureAwait(false) ||
+                        await TryDownloadRootFaviconAsync(uri, targetPath, cancellationToken).ConfigureAwait(false))
+                    {
+                        _attempts.TryRemove(attemptKey, out _);
+                        return (true, targetPath);
+                    }
+                }
+                // ---- Local file / directory ----
+                else if (File.Exists(pathOrUrl) || Directory.Exists(pathOrUrl))
                 {
                     if (ExtractIconFromPath(pathOrUrl, targetPath))
                     {
-                        var savedPath = targetPath;
-                        return (true, savedPath);
+                        _attempts.TryRemove(attemptKey, out _);
+                        return (true, targetPath);
                     }
                 }
 
-                //  Remote URL ?
-                if (Uri.TryCreate(pathOrUrl, UriKind.Absolute, out Uri? uri) &&
-                    (uri.Scheme.Equals("http", StringComparison.OrdinalIgnoreCase) ||
-                     uri.Scheme.Equals("https", StringComparison.OrdinalIgnoreCase)))
-                {
-                    // a) try known favicon services
-                    if (await TryDownloadFaviconFromPatternsAsync(uri, targetPath, cancellationToken)
-                              .ConfigureAwait(false))
-                    {
-                        var savedPath = targetPath;
-                        return (true, savedPath);
-                    }
+                // ---- Failure bookkeeping ----
+                int attempts = _attempts.AddOrUpdate(
+                    attemptKey,
+                    _ => 1,
+                    (_, cur) => cur + 1);
 
-                    // b) fall‑back to HTML <link rel="icon"...> parsing
-                    if (await TryExtractIconFromHtmlAsync(uri, targetPath, cancellationToken)
-                              .ConfigureAwait(false))
-                    {
-                        var savedPath = targetPath;
-                        return (true, savedPath);
-                    }
-                }
+                if (attempts > 3)
+                    _log?.Invoke($"IconHelper: giving up after {attempts} attempts for \"{pathOrUrl}\"");
             }
             catch (Exception ex) when (!ex.IsCritical())
             {
-                // Swallow non‑critical exceptions but log them – the contract is “false on failure”.
                 _log?.Invoke($"IconHelper: unexpected error for \"{pathOrUrl}\" – {ex.Message}");
             }
 
             return (false, string.Empty);
         }
+
 
         /// <summary>
         /// Set a custom icon for an item. The source can be a local image file or a remote URL.
@@ -244,9 +255,13 @@ namespace Flow.Launcher.Plugin.SlickFlow.Utils
             return icon;
         }
 
-        #region Local icon extraction
+    
 
-        /// <summary>
+
+
+    #region Local icon extraction
+
+    /// <summary>
     /// Extracts a system icon from a file **or** a directory and writes it as a PNG.
     /// Returns true on success.
     /// </summary>
@@ -315,38 +330,49 @@ namespace Flow.Launcher.Plugin.SlickFlow.Utils
         #region Remote favicon download (known services)
 
         private async Task<bool> TryDownloadFaviconFromPatternsAsync(
-            Uri uri,
+            Uri siteUri,
             string pngPath,
             CancellationToken ct)
         {
             foreach (var kvp in _faviconUrlPatterns)
             {
-                string requestUrl = kvp.Key == "Default"
-                    ? string.Format(kvp.Value, uri.Scheme, uri.Host)   // “{0}://{1}/favicon.ico”
-                    : string.Format(kvp.Value, uri.Host);              // other services
+                IEnumerable<string> urls = kvp.Key == "Default"
+                    ? new[]
+                    {
+                        $"https://{siteUri.Host}/favicon.ico",
+                        $"http://{siteUri.Host}/favicon.ico"
+                    }
+                    : new[]
+                    {
+                        string.Format(kvp.Value, siteUri.Host)
+                    };
 
-                if (!Uri.TryCreate(requestUrl, UriKind.Absolute, out Uri? requestUri))
-                    continue;
-
-                try
+                foreach (string requestUrl in urls)
                 {
-                    using var response = await HttpClient.GetAsync(requestUri, ct).ConfigureAwait(false);
-                    if (response.StatusCode != HttpStatusCode.OK)
+                    if (!Uri.TryCreate(requestUrl, UriKind.Absolute, out Uri? requestUri))
                         continue;
 
-                    byte[] data = await response.Content.ReadAsByteArrayAsync(ct).ConfigureAwait(false);
-                    if (TrySaveBytesAsPng(data, pngPath))
-                        return true;
-                }
-                catch (Exception ex) when (!ex.IsCritical())
-                {
-                    // Swallow – try the next service.
-                    _log?.Invoke($"Favicon service \"{kvp.Key}\" failed for \"{uri.Host}\" – {ex.Message}");
+                    try
+                    {
+                        using var resp = await HttpClient.GetAsync(requestUri, ct).ConfigureAwait(false);
+                        if (!resp.IsSuccessStatusCode)
+                            continue;
+
+                        byte[] data = await resp.Content.ReadAsByteArrayAsync(ct).ConfigureAwait(false);
+
+                        if (TrySaveBytesAsPng(data, pngPath))
+                            return true;
+                    }
+                    catch (Exception ex) when (!ex.IsCritical())
+                    {
+                        _log?.Invoke($"Favicon service \"{kvp.Key}\" failed for \"{siteUri.Host}\" – {ex.Message}");
+                    }
                 }
             }
 
             return false;
-        }
+}
+
 
         #endregion
 
@@ -354,42 +380,71 @@ namespace Flow.Launcher.Plugin.SlickFlow.Utils
 
         // This regex tolerates any order of attributes and accepts single‑ or double‑quoted values.
         // It also captures URLs that contain spaces (escaped as %20) and ignores any trailing '>'
-        private static readonly Regex IconLinkRegex = new(
-            @"<link(?=[^>]*\brel\s*=\s*['""][^'""]*icon[^'""]*['""])" + // rel contains “icon”
-            @"[^>]*\bhref\s*=\s*['""](?<url>[^'""]+)['""][^>]*>",
-            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant | RegexOptions.Compiled);
 
-        private async Task<bool> TryExtractIconFromHtmlAsync(
+        private static readonly Regex IconLinkRegex = new(
+        @"<link(?=[^>]*\brel\s*=\s*['""][^'""]*icon[^'""]*['""])[^>]*>",
+        RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        private static readonly Regex HrefRegex = new(
+            @"\bhref\s*=\s*['""](?<url>[^'""]+)['""]",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        private static readonly Regex BaseHrefRegex = new(
+            @"<base[^>]*\bhref\s*=\s*['""](?<url>[^'""]+)['""]",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+
+    private async Task<bool> TryExtractIconFromHtmlAsync(
             Uri siteUri,
             string pngPath,
             CancellationToken ct)
         {
             try
             {
-                // 1️⃣  Get the raw HTML (no parsing libraries – keep the dependency footprint small)
                 string html = await HttpClient.GetStringAsync(siteUri, ct).ConfigureAwait(false);
                 if (string.IsNullOrWhiteSpace(html))
                     return false;
 
-                // 2️⃣  Search the first <link … rel="…icon…" … href="…">
-                Match m = IconLinkRegex.Match(html);
-                if (!m.Success)
-                    return false;
+                // Detect <base href>
+                Uri baseUri = siteUri;
+                var baseMatch = BaseHrefRegex.Match(html);
+                if (baseMatch.Success &&
+                    Uri.TryCreate(baseMatch.Groups["url"].Value, UriKind.Absolute, out var b))
+                {
+                    baseUri = b;
+                }
 
-                string rawHref = m.Groups["url"].Value.Trim();
+                foreach (Match linkMatch in IconLinkRegex.Matches(html))
+                {
+                    var hrefMatch = HrefRegex.Match(linkMatch.Value);
+                    if (!hrefMatch.Success)
+                        continue;
 
-                // 3️⃣  Resolve relative URLs
-                Uri resolved = rawHref.StartsWith("http", StringComparison.OrdinalIgnoreCase)
-                    ? new Uri(rawHref)
-                    : new Uri(siteUri, rawHref);
+                    string rawHref = hrefMatch.Groups["url"].Value.Trim();
+                    if (rawHref.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
+                        continue;
 
-                // 4️⃣  Download the candidate image
-                using var resp = await HttpClient.GetAsync(resolved, ct).ConfigureAwait(false);
-                if (resp.StatusCode != HttpStatusCode.OK)
-                    return false;
+                    Uri resolved;
+                    try
+                    {
+                        resolved = new Uri(baseUri, rawHref);
+                    }
+                    catch
+                    {
+                        continue;
+                    }
 
-                byte[] data = await resp.Content.ReadAsByteArrayAsync(ct).ConfigureAwait(false);
-                return TrySaveBytesAsPng(data, pngPath);
+                    using var resp = await HttpClient.GetAsync(resolved, ct).ConfigureAwait(false);
+                    if (!resp.IsSuccessStatusCode)
+                        continue;
+
+                    byte[] data = await resp.Content.ReadAsByteArrayAsync(ct).ConfigureAwait(false);
+
+                    if (TrySaveBytesAsPng(data, pngPath))
+                        return true;
+                }
+
+                return false;
             }
             catch (Exception ex) when (!ex.IsCritical())
             {
@@ -397,6 +452,31 @@ namespace Flow.Launcher.Plugin.SlickFlow.Utils
                 return false;
             }
         }
+
+
+        private async Task<bool> TryDownloadRootFaviconAsync(
+            Uri siteUri,
+            string pngPath,
+            CancellationToken ct)
+        {
+            try
+            {
+                var uri = new Uri($"{siteUri.Scheme}://{siteUri.Host}/favicon.ico");
+                using var resp = await HttpClient.GetAsync(uri, ct).ConfigureAwait(false);
+                if (!resp.IsSuccessStatusCode)
+                    return false;
+
+                byte[] data = await resp.Content.ReadAsByteArrayAsync(ct).ConfigureAwait(false);
+                return TrySaveBytesAsPng(data, pngPath);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+
+
 
         #endregion
 
