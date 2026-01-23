@@ -1,5 +1,6 @@
 using System.Reflection;
 using Flow.Launcher.Plugin.SlickFlow.Commands;
+using Flow.Launcher.Plugin.SlickFlow.ContextMenuResults;
 using Flow.Launcher.Plugin.SlickFlow.items;
 using Flow.Launcher.Plugin.SlickFlow.Items;
 using Flow.Launcher.Plugin.SlickFlow.Utils;
@@ -9,14 +10,14 @@ namespace Flow.Launcher.Plugin.SlickFlow;
 /// <summary>
 /// Flow Launcher plugin for SlickRun-like functionality
 /// </summary>
-public class SlickFlow : IPlugin
+public class SlickFlow : IPlugin, IContextMenu 
 {
     #region Constants
     private delegate List<Result> CommandHandler(string[] args);
     internal PluginInitContext _context;
     internal ItemRepository _itemRepo;
     private Dictionary<string, CommandHandler> _commands;
-    private static string AssemblyDirectory { get; } =
+    public static string AssemblyDirectory { get; } =
         Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!;
     private static string DataDirectory { get; } = Path.Combine(AssemblyDirectory, @"..\..\");
     private readonly string _dbDirectory = @"Settings\SlickFlow\SlickFlow.json";
@@ -66,6 +67,22 @@ public class SlickFlow : IPlugin
         return results;
 
     }
+
+    /// <summary>
+    /// on context menu of item - loads the correct results
+    /// </summary>
+    /// <param name="selectedResult"></param>
+    /// <returns></returns>
+    public List<Result> LoadContextMenus(Result selectedResult)
+    {
+        var item = _itemRepo.GetItemByAlias(selectedResult.Title);
+        if (item is null)
+            return new List<Result>();
+
+        var builder = new ContextMenuBuilder();
+        return builder.Build(selectedResult, item);
+    }
+
 
     #endregion
 

@@ -42,12 +42,10 @@ public class Item
             || SubTitle.ToLowerInvariant().Contains(query)
             || Aliases.Any(a => a.ToLowerInvariant().Contains(query));
     }
-    public void Execute()
+    public void Execute(bool forceAdminExec = false)
     {
         try
         {
-            
-
             if (!IsUrl(FileName) && !File.Exists(FileName))
             {
                 string sysPath = Path.Combine(Environment.SystemDirectory, FileName);
@@ -64,14 +62,12 @@ public class Item
                 WorkingDirectory = string.IsNullOrWhiteSpace(WorkingDir)
                     ? Environment.CurrentDirectory
                     : WorkingDir,
-                UseShellExecute = true // Required for URLs or file associations
+                UseShellExecute = true
             };
 
-            // Run as admin if requested (only for files, not URLs)
-            if (RunAs == 1 && !IsUrl(FileName))
+            if (!IsUrl(FileName) && (RunAs == 1 || forceAdminExec))
                 psi.Verb = "runas";
 
-            // Set window style
             psi.WindowStyle = StartMode switch
             {
                 1 => ProcessWindowStyle.Minimized,
@@ -87,7 +83,7 @@ public class Item
             Console.WriteLine($"[Error] Failed to execute '{FileName}': {ex.Message}");
         }
     }
-    private bool IsUrl(string fileName)
+    public bool IsUrl(string fileName)
     {
         return Uri.TryCreate(fileName, UriKind.Absolute, out var uriResult) 
                 && (uriResult.Scheme == Uri.UriSchemeHttp || uriResult.Scheme == Uri.UriSchemeHttps);   
