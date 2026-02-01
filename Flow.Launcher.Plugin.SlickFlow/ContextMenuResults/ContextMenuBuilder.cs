@@ -11,6 +11,10 @@ namespace Flow.Launcher.Plugin.SlickFlow.ContextMenuResults
             OpenPathProvider.Provide,
             RunAsAdministratorProvider.Provide,
             OpenIncognitoProvider.Provide,
+            OpenInTerminalProvider.Provide,
+            OpenInPowerShellProvider.Provide,
+            ExecutionCountProvider.Provide,
+            AliasesProvider.Provide
         };
 
         public List<Result> Build(Result selectedResult, Item item)

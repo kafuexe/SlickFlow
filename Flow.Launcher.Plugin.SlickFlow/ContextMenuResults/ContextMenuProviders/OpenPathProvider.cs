@@ -3,28 +3,30 @@ using Flow.Launcher.Plugin.SlickFlow.Items;
 
 namespace Flow.Launcher.Plugin.SlickFlow.ContextMenuResults.Results;
 
-public static class OpenPathProvider
+
+public static class OpenPathProvider 
 {
-    // ✅ This function matches the delegate signature
     public static Result? Provide(Result selectedResult, Item item)
     {
-        if (string.IsNullOrWhiteSpace(item.FileName))
+        var path = item.FileName;
+
+        if (string.IsNullOrWhiteSpace(path))
             return null;
 
-        if (item.IsUrl(item.FileName))
+        if (item.IsUrl(path))
             return null;
 
-        if (!File.Exists(item.FileName) && !Directory.Exists(item.FileName))
+        if (!File.Exists(path) && !Directory.Exists(path))
             return null;
 
         return new Result
         {
-            Title = "Open Path",
-            SubTitle = "Open file or containing folder",
+            Title = "Open File Location",
+            SubTitle = "Reveal in Explorer",
             IcoPath = "Assets/Folder.png",
             Action = _ =>
             {
-                OpenPath(item.FileName);
+                OpenPath(path);
                 return true;
             }
         };
@@ -36,7 +38,12 @@ public static class OpenPathProvider
         {
             if (File.Exists(path))
             {
-                Process.Start("explorer.exe", $"/select,\"{path}\"");
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = "explorer.exe",
+                    Arguments = $"/select,\"{path}\"",
+                    UseShellExecute = true
+                });
             }
             else if (Directory.Exists(path))
             {
@@ -47,9 +54,7 @@ public static class OpenPathProvider
                 });
             }
         }
-        catch
-        {
-            // Fail silently
-        }
+        catch { }
     }
 }
+
