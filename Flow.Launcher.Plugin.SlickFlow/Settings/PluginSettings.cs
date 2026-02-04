@@ -7,6 +7,8 @@ namespace Flow.Launcher.Plugin.SlickFlow.Settings;
 public class Settings
 {
   public string DbFilePath { get; set; } = string.Empty;
+  public string IconDirPath { get; set; } = string.Empty;
+
 }
 
 static class SettingsLoader

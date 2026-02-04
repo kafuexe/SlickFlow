@@ -23,11 +23,8 @@ public class SlickFlow : IPlugin, IContextMenu , ISettingProvider
     private Dictionary<string, CommandHandler> _commands;
     public static string AssemblyDirectory { get; } =
         Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!;
-    private static string DataDirectory { get; } = Path.Combine(AssemblyDirectory, @"..\..\");
-
-
     
-    internal IconHelper _iconHelper = new IconHelper(DataDirectory + @"Settings\SlickFlow\icons\");
+    internal IconHelper _iconHelper ;
     internal readonly string _slickFlowIcon = Path.Combine(AssemblyDirectory, "icon.ico");
     internal CommandProcessor _commandProcessor;
     internal ItemSearcher _itemSearcher;
@@ -45,9 +42,10 @@ public class SlickFlow : IPlugin, IContextMenu , ISettingProvider
     public void Init(PluginInitContext context)
     {
         _context = context;
-        // Load persisted settings and determine DB path
         Settings = SettingsManager.Load();
+        _iconHelper = new IconHelper(Settings.IconDirPath);
         _itemRepo = new ItemRepository(Settings.DbFilePath);
+        
         _commandProcessor = new CommandProcessor(this);
         _itemSearcher = new ItemSearcher();
         _itemValidator = new ItemValidator(this);
