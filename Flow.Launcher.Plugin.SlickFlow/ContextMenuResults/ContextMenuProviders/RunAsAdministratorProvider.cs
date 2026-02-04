@@ -1,3 +1,4 @@
+using System.IO;
 using Flow.Launcher.Plugin.SlickFlow.Items;
 
 namespace Flow.Launcher.Plugin.SlickFlow.ContextMenuResults.Results;
