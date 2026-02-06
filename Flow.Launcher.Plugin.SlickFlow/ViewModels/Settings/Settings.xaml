@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:local="clr-namespace:Flow.Launcher.Plugin.SlickFlow.ViewModels.Item"
              mc:Ignorable="d"
              d:DesignHeight="250" d:DesignWidth="600">
     <Grid Margin="8">
@@ -49,37 +50,19 @@
            FontWeight="Bold"
            Margin="0,8,0,4"/>
 
-            <!-- Items List -->
-            <ListView Grid.Row="9"
-                    ItemsSource="{Binding Items}"
-                    Margin="0,4,0,0">
-
-                <ListView.ItemTemplate>
-                    <DataTemplate>
-                        <Border BorderBrush="#444"
-                                BorderThickness="1"
-                                Padding="6"
-                                Margin="0,2">
-
-                            <StackPanel>
-
-                                <TextBlock Text="{Binding FileName}"
-                                        FontWeight="SemiBold"/>
-
-                                <TextBlock Text="{Binding SubTitle}"
-                                        Opacity="0.7"/>
-
-                                <TextBlock Text="{Binding Arguments}"
-                                        FontStyle="Italic"
-                                        Opacity="0.6"/>
-
-                            </StackPanel>
-
-                        </Border>
-                    </DataTemplate>
-                </ListView.ItemTemplate>
-
-            </ListView>
-
+        <!-- Items List -->
+        <ListBox Grid.Row="10"
+                ItemsSource="{Binding Items}"
+                MaxHeight="800"
+                ScrollViewer.VerticalScrollBarVisibility="Auto"
+                VirtualizingPanel.IsVirtualizing="True"
+                VirtualizingPanel.VirtualizationMode="Recycling"
+                ScrollViewer.CanContentScroll="True">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <local:ItemView/>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
     </Grid>
 </UserControl>

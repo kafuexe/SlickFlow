@@ -56,6 +56,7 @@ public class ItemViewModel : INotifyPropertyChanged
         {
             _isEditing = value;
             OnPropertyChanged();
+            RefreshCommands();
         }
     }
 
@@ -159,6 +160,8 @@ public class ItemViewModel : INotifyPropertyChanged
         foreach (var a in _editingCopy.Aliases)
             Aliases.Add(a);
 
+        RefreshAllProperties();
+
         NewAliasInput = string.Empty;
         IsEditing = true;
     }
@@ -166,11 +169,9 @@ public class ItemViewModel : INotifyPropertyChanged
     private void Save()
     {
         _editingCopy.Aliases = Aliases.ToList();
-
         _repository.UpdateItem(_editingCopy);
-
         _originalItem = CloneItem(_editingCopy);
-
+        RefreshAllProperties();
         IsEditing = false;
     }
 
@@ -182,14 +183,7 @@ public class ItemViewModel : INotifyPropertyChanged
         foreach (var a in _originalItem.Aliases)
             Aliases.Add(a);
 
-        // Reset all properties to original values
-        OnPropertyChanged(nameof(FileName));
-        OnPropertyChanged(nameof(Arguments));
-        OnPropertyChanged(nameof(SubTitle));
-        OnPropertyChanged(nameof(WorkingDir));
-        OnPropertyChanged(nameof(RunAs));
-        OnPropertyChanged(nameof(StartMode));
-        OnPropertyChanged(nameof(IconPath));
+        RefreshAllProperties();
 
         NewAliasInput = string.Empty;
         IsEditing = false;
@@ -200,8 +194,12 @@ public class ItemViewModel : INotifyPropertyChanged
         if (string.IsNullOrWhiteSpace(NewAliasInput))
             return;
 
-        if (!Aliases.Contains(NewAliasInput, StringComparer.OrdinalIgnoreCase))
-            Aliases.Add(NewAliasInput.Trim());
+        var alias = NewAliasInput.Trim();
+        if (!Aliases.Any(a =>
+            string.Equals(a, alias, StringComparison.OrdinalIgnoreCase)))
+        {
+            Aliases.Add(alias);
+        }
 
         NewAliasInput = string.Empty;
     }
@@ -235,6 +233,29 @@ public class ItemViewModel : INotifyPropertyChanged
 
     protected void OnPropertyChanged([CallerMemberName] string? name = null)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+
+    
+    private void RefreshCommands()
+    {
+        (EditCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        (SaveCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        (CancelCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        (AddAliasCommand as RelayCommand)?.RaiseCanExecuteChanged();
+        (RemoveAliasCommand as RelayCommand)?.RaiseCanExecuteChanged();
+    }
+
+
+    private void RefreshAllProperties()
+    {
+        OnPropertyChanged(nameof(FileName));
+        OnPropertyChanged(nameof(Arguments));
+        OnPropertyChanged(nameof(SubTitle));
+        OnPropertyChanged(nameof(WorkingDir));
+        OnPropertyChanged(nameof(RunAs));
+        OnPropertyChanged(nameof(StartMode));
+        OnPropertyChanged(nameof(IconPath));
+    }
+
 
     #endregion
 }
