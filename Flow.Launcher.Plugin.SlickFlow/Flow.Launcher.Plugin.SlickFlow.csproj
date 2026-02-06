@@ -33,6 +33,12 @@
     <PackageReference Include="System.Windows.Forms" Version="4.0.0" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Page Update="ViewModels\ViewModel\settings.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
+
 
   <Target Name="PostBuild" AfterTargets="Build">
     <Copy SourceFiles="$(TargetDir)$(TargetFileName)" 

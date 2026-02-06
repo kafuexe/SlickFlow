@@ -6,8 +6,8 @@ using Flow.Launcher.Plugin.SlickFlow.ContextMenuResults;
 using Flow.Launcher.Plugin.SlickFlow.items;
 using Flow.Launcher.Plugin.SlickFlow.Items;
 using Flow.Launcher.Plugin.SlickFlow.Settings;
-using Flow.Launcher.Plugin.SlickFlow.Settings.ViewModel;
 using Flow.Launcher.Plugin.SlickFlow.Utils;
+using Flow.Launcher.Plugin.SlickFlow.ViewModels.Settings;
 
 namespace Flow.Launcher.Plugin.SlickFlow;
 
@@ -103,7 +103,7 @@ public class SlickFlow : IPlugin, IContextMenu , ISettingProvider
         /// <returns>A WPF UserControl for settings.</returns>
         public System.Windows.Controls.Control CreateSettingPanel()
     {
-            return new SettingsView();
+            return new SettingsView(_itemRepo);
     }
 
 
