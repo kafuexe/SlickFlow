@@ -53,7 +53,7 @@
         <!-- Items List -->
         <ListBox Grid.Row="10"
                 ItemsSource="{Binding Items}"
-                MaxHeight="800"
+                MaxHeight="500"
                 ScrollViewer.VerticalScrollBarVisibility="Auto"
                 VirtualizingPanel.IsVirtualizing="True"
                 VirtualizingPanel.VirtualizationMode="Recycling"
