@@ -8,117 +8,66 @@
         <global:InverseBooleanConverter x:Key="InverseBool"/>
     </UserControl.Resources>
 
-    <Grid Margin="4">
-        <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="Auto"/>
-        </Grid.ColumnDefinitions>
+    <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="4" Padding="6" Margin="4">
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <!-- Icon column -->
+                <ColumnDefinition Width="40"/>
+                <!-- Content column -->
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
 
-        <!-- LEFT SIDE -->
-        <StackPanel Grid.Column="0" Margin="0,0,12,0">
-
-            <!-- FILE -->
-            <TextBlock Text="File" Margin="0,0,0,2"/>
-            <ContentControl Content="{Binding}">
-                <ContentControl.ContentTemplate>
-                    <DataTemplate>
-                        <Grid>
-                            <TextBlock Text="{Binding FileName}" 
-                                       Visibility="{Binding IsEditing, Converter={StaticResource InverseBool}}"/>
-                            <TextBox Text="{Binding FileName, UpdateSourceTrigger=PropertyChanged}" 
-                                     Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}"/>
-                        </Grid>
-                    </DataTemplate>
-                </ContentControl.ContentTemplate>
-            </ContentControl>
-
-            <!-- ARGUMENTS -->
-            <TextBlock Text="Arguments" Margin="0,6,0,2"/>
-            <ContentControl Content="{Binding}">
-                <ContentControl.ContentTemplate>
-                    <DataTemplate>
-                        <Grid>
-                            <TextBlock Text="{Binding Arguments}" 
-                                       Visibility="{Binding IsEditing, Converter={StaticResource InverseBool}}"/>
-                            <TextBox Text="{Binding Arguments, UpdateSourceTrigger=PropertyChanged}" 
-                                     Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}"/>
-                        </Grid>
-                    </DataTemplate>
-                </ContentControl.ContentTemplate>
-            </ContentControl>
-
-            <!-- SUBTITLE -->
-            <TextBlock Text="Subtitle" Margin="0,6,0,2"/>
-            <ContentControl Content="{Binding}">
-                <ContentControl.ContentTemplate>
-                    <DataTemplate>
-                        <Grid>
-                            <TextBlock Text="{Binding SubTitle}" 
-                                       Visibility="{Binding IsEditing, Converter={StaticResource InverseBool}}"/>
-                            <TextBox Text="{Binding SubTitle, UpdateSourceTrigger=PropertyChanged}" 
-                                     Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}"/>
-                        </Grid>
-                    </DataTemplate>
-                </ContentControl.ContentTemplate>
-            </ContentControl>
-
-            <!-- WORKING DIR -->
-            <TextBlock Text="Working Dir" Margin="0,6,0,2"/>
-            <ContentControl Content="{Binding}">
-                <ContentControl.ContentTemplate>
-                    <DataTemplate>
-                        <Grid>
-                            <TextBlock Text="{Binding WorkingDir}" 
-                                       Visibility="{Binding IsEditing, Converter={StaticResource InverseBool}}"/>
-                            <TextBox Text="{Binding WorkingDir, UpdateSourceTrigger=PropertyChanged}" 
-                                     Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}"/>
-                        </Grid>
-                    </DataTemplate>
-                </ContentControl.ContentTemplate>
-            </ContentControl>
-
-            <!-- ALIASES -->
-            <TextBlock Text="Aliases" Margin="0,6,0,2"/>
-
-            <!-- Add alias -->
-            <StackPanel Orientation="Horizontal" Margin="0,0,0,6"
-                        Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}">
-                <TextBox Width="200" Padding="4" Text="{Binding NewAliasInput, UpdateSourceTrigger=PropertyChanged}"/>
-                <Button Content="Add" Margin="6,0,0,0" Command="{Binding AddAliasCommand}"/>
+            <!-- ICON -->
+            <StackPanel Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Top">
+                <Image Source="{Binding IconPath}" Width="32" Height="32" Margin="0,0,0,4"/>
+                <!-- Edit icon path -->
+                <TextBox Text="{Binding IconPath, UpdateSourceTrigger=PropertyChanged}" 
+                         Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}" 
+                         Width="36" Margin="0,2,0,0" HorizontalAlignment="Center"/>
             </StackPanel>
 
-            <!-- Alias list -->
-            <ScrollViewer MaxHeight="300" VerticalScrollBarVisibility="Auto">
-                <ItemsControl ItemsSource="{Binding Aliases}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <Grid Margin="0,2">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="Auto"/>
-                                </Grid.ColumnDefinitions>
+            <!-- CONTENT -->
+            <StackPanel Grid.Column="1" Margin="6,0,0,0">
 
-                                <TextBlock Text="{Binding .}" VerticalAlignment="Center"/>
-                                <Button Grid.Column="1"
-                                        Content="Remove"
-                                        Margin="8,0,0,0"
-                                        Command="{Binding RelativeSource={RelativeSource AncestorType=ItemsControl}, Path=DataContext.RemoveAliasCommand}"
-                                        CommandParameter="{Binding .}"
-                                        Visibility="{Binding RelativeSource={RelativeSource AncestorType=ItemsControl}, Path=DataContext.IsEditing, Converter={StaticResource BoolToVis}}"/>
-                            </Grid>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-            </ScrollViewer>
+                <!-- ALIASES -->
+                <TextBlock Text="{Binding AliasesString}" TextWrapping="Wrap" Margin="0,0,0,4"/>
 
-        </StackPanel>
+                <!-- File -->
+                <Grid Margin="0,0,0,2">
+                    <TextBlock Text="{Binding FileName}" Visibility="{Binding IsEditing, Converter={StaticResource InverseBool}}"/>
+                    <TextBox Text="{Binding FileName, UpdateSourceTrigger=PropertyChanged}" Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}"/>
+                </Grid>
 
-        <!-- RIGHT SIDE BUTTONS -->
-        <StackPanel Grid.Column="1" Orientation="Vertical">
-            <Button Content="Edit" Command="{Binding EditCommand}" Margin="0,0,0,6"/>
-            <Button Content="Save" Command="{Binding SaveCommand}" Margin="0,0,0,6"/>
-            <Button Content="Cancel" Command="{Binding CancelCommand}"/>
-        </StackPanel>
+                <!-- Arguments -->
+                <Grid Margin="0,0,0,2">
+                    <TextBlock Text="{Binding ArgsDisplay}" Visibility="{Binding IsEditing, Converter={StaticResource InverseBool}}"/>
+                    <TextBox Text="{Binding Arguments, UpdateSourceTrigger=PropertyChanged}" Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}"/>
+                </Grid>
 
-    </Grid>
+                <!-- Working Dir -->
+                <Grid Margin="0,0,0,4">
+                    <TextBlock Text="{Binding WorkingDirDisplay}" Visibility="{Binding IsEditing, Converter={StaticResource InverseBool}}"/>
+                    <TextBox Text="{Binding WorkingDir, UpdateSourceTrigger=PropertyChanged}" Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}"/>
+                </Grid>
+
+                <!-- Add new alias -->
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,4"
+                            Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}">
+                    <TextBox Width="200" Padding="4" Text="{Binding NewAliasInput, UpdateSourceTrigger=PropertyChanged}"/>
+                    <Button Content="Add" Margin="6,0,0,0" Command="{Binding AddAliasCommand}"/>
+                </StackPanel>
+
+                <!-- Buttons -->
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                    <Button Content="Edit" Command="{Binding EditCommand}" Margin="0,0,6,0"
+                            Visibility="{Binding IsEditing, Converter={StaticResource InverseBool}}"/>
+                    <Button Content="Save" Command="{Binding SaveCommand}" Margin="0,0,6,0"
+                            Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}"/>
+                    <Button Content="Cancel" Command="{Binding CancelCommand}"
+                            Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}"/>
+                </StackPanel>
+
+            </StackPanel>
+        </Grid>
+    </Border>
 </UserControl>
