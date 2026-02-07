@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.IO;
 
 namespace Flow.Launcher.Plugin.SlickFlow.Items;
 public class Item
@@ -10,7 +11,7 @@ public class Item
     public int RunAs { get; set; } = 0;
     public int StartMode { get; set; } = 0;
     public string WorkingDir { get; set; } = string.Empty;
-    public int ExecCount { get; set; }
+    public int ExecCount { get; set; } = 0;
     public List<string> Aliases { get; set; } = new();
     public string IconPath { get; set; } = string.Empty;
 
