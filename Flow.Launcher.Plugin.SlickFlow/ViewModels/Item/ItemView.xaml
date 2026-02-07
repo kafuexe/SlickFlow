@@ -6,6 +6,7 @@
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
         <global:InverseBooleanConverter x:Key="InverseBool" />
+        <global:InverseBooleanToVisibilityConverter x:Key="InverseBoolVis" />
     </UserControl.Resources>
 
     <Border BorderBrush="Gray" BorderThickness="1" CornerRadius="4" Padding="6" Margin="4" HorizontalAlignment="Stretch">
@@ -31,7 +32,7 @@
                            Margin="0,0,0,4"
                            FontWeight="SemiBold"
                            Visibility="{Binding IsEditing,
-                            Converter={StaticResource InverseBool}}" />
+                            Converter={StaticResource InverseBoolVis}}" />
 
                 <!-- edit mode -->
                 <TextBlock Text="Aliases:"
@@ -85,7 +86,7 @@
                 <!-- FILE -->
                 <StackPanel Margin="0,0,0,2">
                     <TextBlock Text="{Binding FileName}"
-                               Visibility="{Binding IsEditing, Converter={StaticResource InverseBool}}" />
+                                   Visibility="{Binding IsEditing, Converter={StaticResource InverseBoolVis}}" />
                     <StackPanel Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}">
                         <TextBlock Text="File:" FontWeight="Bold" Margin="0,0,0,2" />
                         <TextBox HorizontalAlignment="Stretch" Text="{Binding FileName, UpdateSourceTrigger=PropertyChanged}" />
@@ -95,7 +96,7 @@
                 <!-- ARGUMENTS -->
                 <StackPanel Margin="0,0,0,2">
                     <TextBlock Text="{Binding ArgsDisplay}"
-                               Visibility="{Binding IsEditing, Converter={StaticResource InverseBool}}" />
+                               Visibility="{Binding IsEditing, Converter={StaticResource InverseBoolVis}}" />
                     <StackPanel Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}">
                         <TextBlock Text="Arguments:" FontWeight="Bold" Margin="0,0,0,2" />
                         <TextBox HorizontalAlignment="Stretch" Text="{Binding Arguments, UpdateSourceTrigger=PropertyChanged}" />
@@ -105,7 +106,7 @@
                 <!-- WORKING DIR -->
                 <StackPanel Margin="0,0,0,4">
                     <TextBlock Text="{Binding WorkingDirDisplay}"
-                               Visibility="{Binding IsEditing, Converter={StaticResource InverseBool}}" />
+                               Visibility="{Binding IsEditing, Converter={StaticResource InverseBoolVis}}" />
                     <StackPanel Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}">
                         <TextBlock Text="Working Dir:" FontWeight="Bold" Margin="0,0,0,2" />
                         <TextBox HorizontalAlignment="Stretch" Text="{Binding WorkingDir, UpdateSourceTrigger=PropertyChanged}" />
@@ -121,8 +122,8 @@
 
                 <!-- BUTTONS -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                    <Button Content="Edit" Command="{Binding EditCommand}" Margin="0,0,6,0"
-                            Visibility="{Binding IsEditing, Converter={StaticResource InverseBool}}" />
+                        <Button Content="Edit" Command="{Binding EditCommand}" Margin="0,0,6,0"
+                            Visibility="{Binding IsEditing, Converter={StaticResource InverseBoolVis}}" />
                     <Button Content="Save" Command="{Binding SaveCommand}" Margin="0,0,6,0"
                             Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}" />
                     <Button Content="Cancel" Command="{Binding CancelCommand}"
