@@ -1,5 +1,5 @@
-﻿
-namespace Flow.Launcher.Plugin.SlickFlow.ViewModels.Item;
+﻿namespace Flow.Launcher.Plugin.SlickFlow.ViewModels.Item;
+
 using UserControl = System.Windows.Controls.UserControl;
 
 public partial class ItemView : UserControl
@@ -9,3 +9,4 @@ public partial class ItemView : UserControl
         InitializeComponent();
     }
 }
+
