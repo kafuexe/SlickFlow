@@ -72,11 +72,15 @@
                 </ItemsControl>
 
                 <!-- Add new alias -->
-                <StackPanel Orientation="Horizontal" Margin="0,0,0,4"
-                            Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}">
-                    <TextBox Padding="4" HorizontalAlignment="Stretch" Text="{Binding NewAliasInput, UpdateSourceTrigger=PropertyChanged}" />
-                    <Button Content="Add" Margin="6,0,0,0" Command="{Binding AddAliasCommand}" />
-                </StackPanel>
+                <Grid Margin="0,0,0,4"
+                      Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <TextBox Grid.Column="0" Padding="4" Text="{Binding NewAliasInput, UpdateSourceTrigger=PropertyChanged}" />
+                    <Button Grid.Column="1" Content="Add" Margin="6,0,0,0" Command="{Binding AddAliasCommand}" />
+                </Grid>
 
                 <!-- FILE -->
                 <StackPanel Margin="0,0,0,2">
