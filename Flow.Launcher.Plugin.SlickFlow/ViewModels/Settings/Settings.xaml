@@ -54,10 +54,17 @@
         <ListBox Grid.Row="10"
                 ItemsSource="{Binding Items}"
                 MaxHeight="500"
+                HorizontalContentAlignment="Stretch"
                 ScrollViewer.VerticalScrollBarVisibility="Auto"
                 VirtualizingPanel.IsVirtualizing="True"
                 VirtualizingPanel.VirtualizationMode="Recycling"
-                ScrollViewer.CanContentScroll="True">
+                ScrollViewer.CanContentScroll="False">
+            <ListBox.ItemContainerStyle>
+                <Style TargetType="ListBoxItem">
+                    <Setter Property="HorizontalAlignment" Value="Stretch" />
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                </Style>
+            </ListBox.ItemContainerStyle>
             <ListBox.ItemTemplate>
                 <DataTemplate>
                     <local:ItemView/>

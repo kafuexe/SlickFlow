@@ -64,9 +64,6 @@ public class ItemViewModel : INotifyPropertyChanged
 
     #region Exposed Properties
 
-    public string Id => _originalItem.Id;
-    public string ArgsDisplay => $"args: {Arguments}";
-    public string WorkingDirDisplay => $"working dir: {WorkingDir}";
     public string AliasesString => string.Join(", ", Aliases);
 
     public string FileName
