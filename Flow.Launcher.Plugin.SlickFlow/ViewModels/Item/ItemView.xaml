@@ -5,7 +5,6 @@
 
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
-        <global:InverseBooleanConverter x:Key="InverseBool" />
         <global:InverseBooleanToVisibilityConverter x:Key="InverseBoolVis" />
     </UserControl.Resources>
 
@@ -20,7 +19,7 @@
 
             <!-- ICON IMAGE -->
             <StackPanel Grid.Column="0" HorizontalAlignment="Center" VerticalAlignment="Top">
-                <Image Source="{Binding IconPath}" Width="32" Height="32" Margin="0,0,0,4" />
+                <Image Source="{Binding Icon}" Width="32" Height="32" Margin="0,0,0,4" />
             </StackPanel>
 
             <!-- CONTENT -->
@@ -29,20 +28,20 @@
                 <!-- ALIASES -->
                 <!-- non edit mode -->
                 <TextBlock Text="{Binding AliasesString}"
-                           Margin="0,0,0,4"
-                           FontWeight="SemiBold"
-                           Visibility="{Binding IsEditing,
-                            Converter={StaticResource InverseBoolVis}}" />
+                    Margin="0,0,0,4"
+                    FontWeight="SemiBold"
+                    Visibility="{Binding IsEditing,
+                                                Converter={StaticResource InverseBoolVis}}" />
 
                 <!-- edit mode -->
                 <TextBlock Text="Aliases:"
-                           Visibility="{Binding IsEditing,
-                            Converter={StaticResource BoolToVis}}" />
-                
+                    Visibility="{Binding IsEditing,
+                                                Converter={StaticResource BoolToVis}}" />
+
                 <ItemsControl ItemsSource="{Binding Aliases}"
-                              Margin="0,0,0,4"
-                              Visibility="{Binding IsEditing,
-                               Converter={StaticResource BoolToVis}}">
+                    Margin="0,0,0,4"
+                    Visibility="{Binding IsEditing,
+                                                Converter={StaticResource BoolToVis}}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <WrapPanel />
@@ -60,12 +59,12 @@
                                     <TextBlock Text="{Binding .}" Margin="0,0,4,0" />
 
                                     <Button Content="X"
-                                            Width="16"
-                                            Height="16"
-                                            Padding="0"
-                                            Command="{Binding DataContext.RemoveAliasCommand,
-                                          RelativeSource={RelativeSource AncestorType=UserControl}}"
-                                            CommandParameter="{Binding .}" />
+                                        Width="16"
+                                        Height="16"
+                                        Padding="0"
+                                        Command="{Binding DataContext.RemoveAliasCommand,
+                                                                                RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                        CommandParameter="{Binding .}" />
                                 </StackPanel>
                             </Border>
                         </DataTemplate>
@@ -74,7 +73,7 @@
 
                 <!-- Add new alias -->
                 <Grid Margin="0,0,0,4"
-                      Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}">
+                        Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
@@ -86,50 +85,60 @@
                 <!-- FILE -->
                 <StackPanel Margin="0,0,0,2">
                     <TextBlock Text="{Binding FileName}"
-                                   Visibility="{Binding IsEditing, Converter={StaticResource InverseBoolVis}}" />
+                        Visibility="{Binding IsEditing, Converter={StaticResource InverseBoolVis}}" />
                     <TextBlock Text="{Binding ExecCount, StringFormat=Executed: {0}}"
-                               Visibility="{Binding IsEditing, Converter={StaticResource InverseBoolVis}}"
-                                FontSize="12" Margin="0,2,0,0" />
+                        Visibility="{Binding IsEditing, Converter={StaticResource InverseBoolVis}}"
+                        FontSize="12" Margin="0,2,0,0" />
                     <StackPanel Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}">
                         <TextBlock Text="File:" FontWeight="Bold" Margin="0,0,0,2" />
-                        <TextBox HorizontalAlignment="Stretch" Text="{Binding FileName, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBox HorizontalAlignment="Stretch"
+                            Text="{Binding FileName, UpdateSourceTrigger=PropertyChanged}" />
                     </StackPanel>
                 </StackPanel>
 
                 <!-- ARGUMENTS -->
                 <StackPanel Margin="0,0,0,2">
                     <TextBlock Text="{Binding ArgsDisplay}"
-                               Visibility="{Binding IsEditing, Converter={StaticResource InverseBoolVis}}" />
+                        Visibility="{Binding IsEditing, Converter={StaticResource InverseBoolVis}}" />
                     <StackPanel Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}">
                         <TextBlock Text="Arguments:" FontWeight="Bold" Margin="0,0,0,2" />
-                        <TextBox HorizontalAlignment="Stretch" Text="{Binding Arguments, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBox HorizontalAlignment="Stretch"
+                            Text="{Binding Arguments, UpdateSourceTrigger=PropertyChanged}" />
                     </StackPanel>
                 </StackPanel>
 
                 <!-- WORKING DIR -->
                 <StackPanel Margin="0,0,0,4">
                     <TextBlock Text="{Binding WorkingDirDisplay}"
-                               Visibility="{Binding IsEditing, Converter={StaticResource InverseBoolVis}}" />
+                        Visibility="{Binding IsEditing, Converter={StaticResource InverseBoolVis}}" />
                     <StackPanel Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}">
                         <TextBlock Text="Working Dir:" FontWeight="Bold" Margin="0,0,0,2" />
-                        <TextBox HorizontalAlignment="Stretch" Text="{Binding WorkingDir, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBox HorizontalAlignment="Stretch"
+                            Text="{Binding WorkingDir, UpdateSourceTrigger=PropertyChanged}" />
                     </StackPanel>
                 </StackPanel>
 
                 <!-- ICON PATH EDIT (moved to bottom) -->
                 <StackPanel Orientation="Vertical" Margin="0,0,0,4"
-                            Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}">
+                        Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}">
                     <TextBlock Text="Icon Path:" FontWeight="Bold" Margin="0,0,0,2" />
-                    <TextBox HorizontalAlignment="Stretch" Text="{Binding IconPath, UpdateSourceTrigger=PropertyChanged}" />
+                    <TextBox HorizontalAlignment="Stretch"
+                        Text="{Binding IconPath, UpdateSourceTrigger=PropertyChanged}" />
                 </StackPanel>
 
                 <!-- BUTTONS -->
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                         <Button Content="Edit" Command="{Binding EditCommand}" Margin="0,0,6,0"
                             Visibility="{Binding IsEditing, Converter={StaticResource InverseBoolVis}}" />
-                    <Button Content="Save" Command="{Binding SaveCommand}" Margin="0,0,6,0"
+                        <Button Content="Delete"
+                            Command="{Binding DeleteItemCommand}"
+                            Margin="6,0,6,0"
+                            Background="#881111"
                             Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}" />
-                    <Button Content="Cancel" Command="{Binding CancelCommand}"
+                        <Button Content="Cancel" Command="{Binding CancelCommand}"
+                                Margin="0,0,6,0"
+                            Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}" />
+                        <Button Content="Save" Command="{Binding SaveCommand}" Margin="0,0,4,0"
                             Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}" />
                 </StackPanel>
 

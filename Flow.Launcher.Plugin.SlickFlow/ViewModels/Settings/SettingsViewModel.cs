@@ -1,3 +1,4 @@
+using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
@@ -11,12 +12,14 @@ namespace Flow.Launcher.Plugin.SlickFlow.ViewModels.Settings;
 public class SettingsViewModel : INotifyPropertyChanged
 {
     private readonly Plugin.SlickFlow.Settings.Settings _settings;
-    public ObservableCollection<ItemViewModel> Items { get; }
+    private readonly ItemRepository _repo;
+    public ObservableCollection<ItemViewModel> Items { get; } = new();
 
     public SettingsViewModel(ItemRepository repo)
     {
         _settings = SettingsManager.Load();
-       
+        _repo = repo;
+
         // DB file
         _dbFilePath = _settings.DbFilePath;
         SavedDbPath = _settings.DbFilePath;
@@ -29,11 +32,11 @@ public class SettingsViewModel : INotifyPropertyChanged
         SaveCommand = new RelayCommand(_ => Save());
         BrowseDbFolderCommand = new RelayCommand(_ => BrowseDbFile());
         BrowseIconFolderCommand = new RelayCommand(_ => BrowseIconFolder());
-
+        ReloadItemsCommand = new RelayCommand(_ => ReloadItems());
+        AddItemCommand = new RelayCommand(_ => AddItem());
         //Items:
-        Items = new ObservableCollection<ItemViewModel>(
-        repo.GetAllItems()
-            .Select(i => new ItemViewModel(i, repo)));
+        ReloadItems();
+
     }
 
     #region DB File Properties
@@ -97,6 +100,8 @@ public class SettingsViewModel : INotifyPropertyChanged
     public ICommand SaveCommand { get; }
     public ICommand BrowseDbFolderCommand { get; }
     public ICommand BrowseIconFolderCommand { get; }
+    public ICommand ReloadItemsCommand { get; }
+    public ICommand AddItemCommand { get; }
 
     #endregion
 
@@ -155,9 +160,48 @@ public class SettingsViewModel : INotifyPropertyChanged
         catch { }
     }
 
+    private void ReloadItems()
+    {
+        Items.Clear();
+        var tempItems = _repo.GetAllItems();
+        tempItems.Reverse();
+        foreach (var item in tempItems)
+        {
+            var vm = new ItemViewModel(item, _repo);
+            vm.Deleted += ReloadItems;
+            Items.Add(vm);
+        }
+    }
+
+    private void AddItem()
+    {
+        var baseAlias = "New Item";
+        var alias = baseAlias;
+        var index = 2;
+        
+        while (_repo.GetItemByAlias(alias) != null)
+        {
+            if (index > 10000) // safety guard
+                throw new InvalidOperationException(
+                    "Failed to generate unique alias.");
+
+            alias = $"{baseAlias} {index}";
+            index++;
+        }
+        var newItem = new Items.Item()
+        {
+            Aliases = new List<string> { alias }
+        };
+
+        _repo.AddItem(newItem);
+        ReloadItems();
+
+    }
+
     #endregion
 
     #region INotifyPropertyChanged
+
 
     public event PropertyChangedEventHandler? PropertyChanged;
     protected void OnPropertyChanged(string name)

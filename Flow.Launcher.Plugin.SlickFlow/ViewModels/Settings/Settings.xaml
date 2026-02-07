@@ -60,14 +60,18 @@
                     Command="{Binding BrowseIconFolderCommand}" />
         </Grid>
 
-        <!-- Save Button -->
-        <Button Grid.Row="4" Grid.Column="0" Content="Save" HorizontalAlignment="Left" Width="80" Margin="0,6,0,0" Command="{Binding SaveCommand}" />
+        <!-- Action Buttons -->
+        <StackPanel Grid.Row="4" Grid.Column="0" Orientation="Horizontal" Margin="0,6,0,0">
+            <Button Content="Save" Width="80" Command="{Binding SaveCommand}" />
+            <Button Content="Add Item" Width="90" Margin="6,0,0,0" Command="{Binding AddItemCommand}" />
+            <Button Content="Refresh" Width="80" Margin="6,0,0,0" Command="{Binding ReloadItemsCommand}" />
+        </StackPanel>
 
         <!-- Items Label -->
           <TextBlock Grid.Row="0" Grid.Column="1"
-              Text="Items"
-              FontWeight="Bold"
-              Margin="4,4,0,4"/>
+            Text="Items"
+            FontWeight="Bold"
+            Margin="4,4,0,4" />
 
         <!-- Items List -->
         <ListBox Grid.Row="1" Grid.Column="1" Grid.RowSpan="5"
@@ -86,7 +90,7 @@
             </ListBox.ItemContainerStyle>
             <ListBox.ItemTemplate>
                 <DataTemplate>
-                    <local:ItemView/>
+                    <local:ItemView />
                 </DataTemplate>
             </ListBox.ItemTemplate>
         </ListBox>

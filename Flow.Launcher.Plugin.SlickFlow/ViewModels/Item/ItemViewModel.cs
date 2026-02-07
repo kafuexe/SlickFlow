@@ -2,9 +2,12 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Windows.Input;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using Flow.Launcher.Plugin.SlickFlow.Items;
 using Flow.Launcher.Plugin.SlickFlow.Utils;
 
@@ -29,6 +32,8 @@ public class ItemViewModel : INotifyPropertyChanged
         _originalItem = item;
         _editingCopy = CloneItem(item);
 
+        LoadIcon(_originalItem.IconPath);
+
         Aliases = new ObservableCollection<string>(_editingCopy.Aliases);
         Aliases.CollectionChanged += (s, e) => OnPropertyChanged(nameof(AliasesString));
         EditCommand = new RelayCommand(_ => BeginEdit(), _ => !IsEditing);
@@ -36,7 +41,12 @@ public class ItemViewModel : INotifyPropertyChanged
         CancelCommand = new RelayCommand(_ => Cancel(), _ => IsEditing);
         AddAliasCommand = new RelayCommand(_ => AddAlias(), _ => IsEditing && !string.IsNullOrWhiteSpace(NewAliasInput));
         RemoveAliasCommand = new RelayCommand(obj => RemoveAlias(obj as string), _ => IsEditing);
+        DeleteItemCommand = new RelayCommand(_ => DeleteItem());
+
     }
+    
+    // Raised after this item has been deleted from the repository
+    public event Action? Deleted;
 
     #region Commands
 
@@ -45,7 +55,15 @@ public class ItemViewModel : INotifyPropertyChanged
     public ICommand CancelCommand { get; }
     public ICommand AddAliasCommand { get; }
     public ICommand RemoveAliasCommand { get; }
+    public ICommand DeleteItemCommand { get; }
 
+    private void DeleteItem()
+    {
+        _repository.DeleteItem(_originalItem.Id);
+        IsEditing = false;
+        Deleted?.Invoke();
+
+    }
     #endregion
 
     #region State
@@ -143,6 +161,21 @@ public class ItemViewModel : INotifyPropertyChanged
         }
     }
 
+    private ImageSource _icon;
+    
+    public ImageSource Icon
+    {
+        get => _icon;
+        private set
+        {
+            if (_icon == value)
+                return;
+
+            _icon = value;
+            OnPropertyChanged();
+        }
+}
+
     public ObservableCollection<string> Aliases { get; }
 
     public string NewAliasInput
@@ -180,7 +213,9 @@ public class ItemViewModel : INotifyPropertyChanged
         _repository.UpdateItem(_editingCopy);
         _originalItem = CloneItem(_editingCopy);
         RefreshAllProperties();
+        LoadIcon(_originalItem.IconPath);
         IsEditing = false;
+
     }
 
     private void Cancel()
@@ -265,8 +300,27 @@ public class ItemViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(ArgsDisplay));
         OnPropertyChanged(nameof(WorkingDirDisplay));
         OnPropertyChanged(nameof(ExecCount));
-    }
 
+    }
+    private void LoadIcon(string path)
+    {
+        if (!File.Exists(path))
+        {
+            Icon = null;
+            return;
+        }
+
+        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+        var bitmap = new BitmapImage();
+        bitmap.BeginInit();
+        bitmap.CacheOption = BitmapCacheOption.OnLoad; // key part
+        bitmap.StreamSource = stream;
+        bitmap.EndInit();
+        bitmap.Freeze();
+
+        Icon = bitmap;
+    }
 
     #endregion
 }
