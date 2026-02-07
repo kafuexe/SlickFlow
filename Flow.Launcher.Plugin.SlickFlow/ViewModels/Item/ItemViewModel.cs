@@ -145,6 +145,7 @@ public class ItemViewModel : INotifyPropertyChanged
         {
             _newAliasInput = value;
             OnPropertyChanged();
+            RefreshCommands();
         }
     }
 
