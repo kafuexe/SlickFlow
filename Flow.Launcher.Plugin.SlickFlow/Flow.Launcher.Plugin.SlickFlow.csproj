@@ -13,6 +13,8 @@
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
@@ -24,15 +26,34 @@
     <Content Include="plugin.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <AssetFiles Include="Assets\**\*.*" />
     <PackageReference Include="Flow.Launcher.Plugin" Version="4.4.0" />
     <PackageReference Include="System.Drawing.Common" Version="9.0.10" />
     <PackageReference Include="System.Runtime" Version="4.3.1" />
+    <PackageReference Include="System.Windows.Forms" Version="4.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Page Update="ViewModels\ViewModel\settings.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
   </ItemGroup>
 
 
-<Target Name="PostBuild" AfterTargets="Build">
-  <Copy SourceFiles="$(TargetDir)$(TargetFileName)" DestinationFolder="$(AppData)\FlowLauncher\Plugins\SlickFlow\" />
-  <Copy SourceFiles="$(ProjectDir)plugin.json" DestinationFolder="$(AppData)\FlowLauncher\Plugins\SlickFlow\" />
-  <Copy SourceFiles="$(ProjectDir)icon.ico" DestinationFolder="$(AppData)\FlowLauncher\Plugins\SlickFlow\" />
-</Target>
+  <Target Name="PostBuild" AfterTargets="Build">
+    <Copy SourceFiles="$(TargetDir)$(TargetFileName)" 
+          DestinationFolder="$(AppData)\FlowLauncher\Plugins\SlickFlow\" />
+
+    <Copy SourceFiles="$(ProjectDir)plugin.json" 
+          DestinationFolder="$(AppData)\FlowLauncher\Plugins\SlickFlow\" 
+          SkipUnchangedFiles="true"/>
+
+    <Copy SourceFiles="$(ProjectDir)icon.ico" 
+          DestinationFolder="$(AppData)\FlowLauncher\Plugins\SlickFlow\" 
+          SkipUnchangedFiles="true"/>
+
+    <Copy SourceFiles="@(AssetFiles)" 
+          DestinationFolder="$(AppData)\FlowLauncher\Plugins\SlickFlow\Assets" 
+          SkipUnchangedFiles="true" />
+  </Target>
 </Project>

@@ -1,30 +1,36 @@
+using System.IO;
 using System.Reflection;
+using System.Windows.Controls;
 using Flow.Launcher.Plugin.SlickFlow.Commands;
+using Flow.Launcher.Plugin.SlickFlow.ContextMenuResults;
 using Flow.Launcher.Plugin.SlickFlow.items;
 using Flow.Launcher.Plugin.SlickFlow.Items;
+using Flow.Launcher.Plugin.SlickFlow.Settings;
 using Flow.Launcher.Plugin.SlickFlow.Utils;
+using Flow.Launcher.Plugin.SlickFlow.ViewModels.Settings;
 
 namespace Flow.Launcher.Plugin.SlickFlow;
 
 /// <summary>
 /// Flow Launcher plugin for SlickRun-like functionality
 /// </summary>
-public class SlickFlow : IPlugin
+public class SlickFlow : IPlugin, IContextMenu , ISettingProvider
 {
     #region Constants
     private delegate List<Result> CommandHandler(string[] args);
     internal PluginInitContext _context;
     internal ItemRepository _itemRepo;
     private Dictionary<string, CommandHandler> _commands;
-    private static string AssemblyDirectory { get; } =
+    public static string AssemblyDirectory { get; } =
         Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!;
-    private static string DataDirectory { get; } = Path.Combine(AssemblyDirectory, @"..\..\");
-    private readonly string _dbDirectory = @"Settings\SlickFlow\SlickFlow.json";
-    internal IconHelper _iconHelper = new IconHelper(DataDirectory + @"Settings\SlickFlow\icons\");
+    
+    internal IconHelper _iconHelper ;
     internal readonly string _slickFlowIcon = Path.Combine(AssemblyDirectory, "icon.ico");
     internal CommandProcessor _commandProcessor;
     internal ItemSearcher _itemSearcher;
     internal ItemValidator _itemValidator;
+    public Settings.Settings Settings { get; set; } = new();
+
     #endregion
 
     #region IPlugin Api
@@ -36,7 +42,10 @@ public class SlickFlow : IPlugin
     public void Init(PluginInitContext context)
     {
         _context = context;
-        _itemRepo = new ItemRepository(DataDirectory + _dbDirectory);
+        Settings = SettingsManager.Load();
+        _iconHelper = new IconHelper(Settings.IconDirPath);
+        _itemRepo = new ItemRepository(Settings.DbFilePath);
+        
         _commandProcessor = new CommandProcessor(this);
         _itemSearcher = new ItemSearcher();
         _itemValidator = new ItemValidator(this);
@@ -66,6 +75,37 @@ public class SlickFlow : IPlugin
         return results;
 
     }
+
+    /// <summary>
+    /// on context menu of item - loads the correct results
+    /// </summary>
+    /// <param name="selectedResult"></param>
+    /// <returns></returns>
+    public List<Result> LoadContextMenus(Result selectedResult)
+    {
+        var item = _itemRepo.GetItemByAlias(selectedResult.Title);
+        if (item is null)
+            return new List<Result>();
+
+        var builder = new ContextMenuBuilder();
+        return builder.Build(selectedResult, item);
+    }
+
+
+    /// <summary>
+    ///  slickFlows settings
+    /// </summary>
+    /// <returns></returns>
+    /// <exception cref="NotImplementedException"></exception>
+        /// <summary>
+        /// Creates the settings panel UI for the plugin.
+        /// </summary>
+        /// <returns>A WPF UserControl for settings.</returns>
+        public System.Windows.Controls.Control CreateSettingPanel()
+    {
+            return new SettingsView(_itemRepo);
+    }
+
 
     #endregion
 
@@ -142,7 +182,6 @@ public class SlickFlow : IPlugin
             return true;
         return false;
     }
-
 
 
 }
