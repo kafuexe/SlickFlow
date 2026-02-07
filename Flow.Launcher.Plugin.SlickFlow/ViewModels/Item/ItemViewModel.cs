@@ -30,6 +30,7 @@ public class ItemViewModel : INotifyPropertyChanged
         _editingCopy = CloneItem(item);
 
         Aliases = new ObservableCollection<string>(_editingCopy.Aliases);
+        Aliases.CollectionChanged += (s, e) => OnPropertyChanged(nameof(AliasesString));
         EditCommand = new RelayCommand(_ => BeginEdit(), _ => !IsEditing);
         SaveCommand = new RelayCommand(_ => Save(), _ => IsEditing);
         CancelCommand = new RelayCommand(_ => Cancel(), _ => IsEditing);
@@ -65,6 +66,12 @@ public class ItemViewModel : INotifyPropertyChanged
     #region Exposed Properties
 
     public string AliasesString => string.Join(", ", Aliases);
+
+    public string ArgsDisplay => string.IsNullOrWhiteSpace(Arguments) ? "" : "Args: " + Arguments;
+
+    public string WorkingDirDisplay => string.IsNullOrWhiteSpace(WorkingDir) ? "" : "working dir: "+  WorkingDir;
+
+    public int ExecCount => _editingCopy.ExecCount;
 
     public string FileName
     {
@@ -255,6 +262,9 @@ public class ItemViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(RunAs));
         OnPropertyChanged(nameof(StartMode));
         OnPropertyChanged(nameof(IconPath));
+        OnPropertyChanged(nameof(ArgsDisplay));
+        OnPropertyChanged(nameof(WorkingDirDisplay));
+        OnPropertyChanged(nameof(ExecCount));
     }
 
 

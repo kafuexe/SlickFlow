@@ -87,6 +87,9 @@
                 <StackPanel Margin="0,0,0,2">
                     <TextBlock Text="{Binding FileName}"
                                    Visibility="{Binding IsEditing, Converter={StaticResource InverseBoolVis}}" />
+                    <TextBlock Text="{Binding ExecCount, StringFormat=Executed: {0}}"
+                               Visibility="{Binding IsEditing, Converter={StaticResource InverseBoolVis}}"
+                               FontStyle="Italic" FontSize="12" Margin="0,2,0,0" />
                     <StackPanel Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}">
                         <TextBlock Text="File:" FontWeight="Bold" Margin="0,0,0,2" />
                         <TextBox HorizontalAlignment="Stretch" Text="{Binding FileName, UpdateSourceTrigger=PropertyChanged}" />
