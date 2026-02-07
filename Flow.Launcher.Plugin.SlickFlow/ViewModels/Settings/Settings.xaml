@@ -8,12 +8,12 @@
              d:DesignHeight="250" d:DesignWidth="600">
     <Grid Margin="8">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto" /> <!-- DB Label -->
-            <RowDefinition Height="Auto" /> <!-- DB Path + Browse -->
-            <RowDefinition Height="Auto" /> <!-- Icon Label -->
-            <RowDefinition Height="Auto" /> <!-- Icon Path + Browse -->
-            <RowDefinition Height="Auto" /> <!-- Save button -->
-            <RowDefinition Height="*" />    <!-- filler -->
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" /> <!-- filler -->
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="2*" />
@@ -21,22 +21,44 @@
         </Grid.ColumnDefinitions>
 
         <!-- DB File Label -->
-        <TextBlock Grid.Row="0" Grid.Column="0" Text="DB File Path:" VerticalAlignment="Center" Margin="0,0,0,2" />
+        <TextBlock Grid.Row="0" Grid.Column="0" Text="DB File Path:" VerticalAlignment="Center" />
 
         <!-- DB File Path + Browse -->
-        <StackPanel Grid.Row="1" Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Stretch" Margin="0,0,0,4">
-            <TextBox HorizontalAlignment="Stretch" VerticalAlignment="Center" Text="{Binding DbFilePath}" />
-            <Button Content="Browse" Margin="6,0,0,0" Command="{Binding BrowseDbFolderCommand}" />
-        </StackPanel>
+        <Grid Grid.Row="1" Grid.Column="0" Margin="0,4,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <TextBox Grid.Column="0"
+                    VerticalAlignment="Center"
+                    Text="{Binding DbFilePath}" />
+
+            <Button Grid.Column="1"
+                    Content="Browse"
+                    Margin="6,0,0,0"
+                    Command="{Binding BrowseDbFolderCommand}" />
+        </Grid>
 
         <!-- Icon Folder Label -->
-        <TextBlock Grid.Row="2" Grid.Column="0" Text="Icon Folder Path:" VerticalAlignment="Center" Margin="0,0,0,2" />
+        <TextBlock Grid.Row="2" Grid.Column="0" Text="Icon Folder Path:" VerticalAlignment="Center" />
 
         <!-- Icon Folder Path + Browse -->
-        <StackPanel Grid.Row="3" Grid.Column="0" Orientation="Horizontal" HorizontalAlignment="Stretch" Margin="0,0,0,0">
-            <TextBox HorizontalAlignment="Stretch" VerticalAlignment="Center" Text="{Binding IconDirPath}" />
-            <Button Content="Browse" Margin="6,0,0,0" Command="{Binding BrowseIconFolderCommand}" />
-        </StackPanel>
+        <Grid Grid.Row="3" Grid.Column="0" Margin="0,4,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <TextBox Grid.Column="0"
+                     VerticalAlignment="Center"
+                     Text="{Binding IconDirPath}" />
+
+            <Button Grid.Column="1"
+                    Content="Browse"
+                    Margin="6,0,0,0"
+                    Command="{Binding BrowseIconFolderCommand}" />
+        </Grid>
 
         <!-- Save Button -->
         <Button Grid.Row="4" Grid.Column="0" Content="Save" HorizontalAlignment="Left" Width="80" Margin="0,6,0,0" Command="{Binding SaveCommand}" />
@@ -48,7 +70,7 @@
               Margin="4,4,0,4"/>
 
         <!-- Items List -->
-        <ListBox Grid.Row="1" Grid.Column="1" Grid.RowSpan="4"
+        <ListBox Grid.Row="1" Grid.Column="1" Grid.RowSpan="5"
             ItemsSource="{Binding Items}"
             MaxHeight="500"
             HorizontalContentAlignment="Stretch"
