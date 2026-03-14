@@ -1,15 +1,17 @@
-using System.Collections.Generic;
-using System.Linq;
+using Flow.Launcher.Plugin.SlickFlow.Items;
+using Flow.Launcher.Plugin.SlickFlow.Items.Abstract;
 
 namespace Flow.Launcher.Plugin.SlickFlow.items;
 
 public class ItemValidator
 {
-    private readonly SlickFlow _plugin;
+    private readonly IItemRepository _itemRepo;
+    private readonly string _slickFlowIcon;
 
-    public ItemValidator(SlickFlow plugin)
+    public ItemValidator(IItemRepository itemRepo, string slickFlowIcon)
     {
-        _plugin = plugin;
+        _itemRepo = itemRepo;
+        _slickFlowIcon = slickFlowIcon;
     }
 
     public List<Result> ValidateAliases(List<string> aliases)
@@ -20,13 +22,13 @@ public class ItemValidator
             results.Add(new Result
             {
                 Title = "No valid aliases provided",
-                IcoPath = _plugin._slickFlowIcon,
+                IcoPath = _slickFlowIcon,
                 Score = int.MaxValue - 1000
             });
             return results;
         }
 
-        var allItems = _plugin._itemRepo.GetAllItems();
+        var allItems = _itemRepo.GetAllItems();
         var existing = allItems.SelectMany(i => i.Aliases.Select(a => a.ToLowerInvariant()))
             .Intersect(aliases.Select(a => a.ToLowerInvariant()))
             .ToList() as List<string>;
@@ -36,7 +38,7 @@ public class ItemValidator
             results.Add(new Result
             {
                 Title = $"Alias already exists: {string.Join(", ", existing)}",
-                IcoPath = _plugin._slickFlowIcon,
+                IcoPath = _slickFlowIcon,
                 Score = int.MaxValue - 1000
             });
         }

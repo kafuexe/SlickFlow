@@ -48,7 +48,7 @@ public class SlickFlow : IPlugin, IContextMenu , ISettingProvider
         
         _commandProcessor = new CommandProcessor(this);
         _itemSearcher = new ItemSearcher();
-        _itemValidator = new ItemValidator(this);
+        _itemValidator = new ItemValidator(_itemRepo, _slickFlowIcon);
         _context.API.LogInfo("SlickFlow", "Plugin loaded successfully.");
         
     }
