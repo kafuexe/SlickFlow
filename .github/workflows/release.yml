@@ -1,0 +1,40 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  build-and-upload:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            7.0.x
+            8.0.x
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Run tests
+        run: dotnet test --verbosity normal
+
+      - name: Publish
+        run: dotnet publish Flow.Launcher.Plugin.SlickFlow -c Release -r win-x64 --no-self-contained
+
+      - name: Create release zip
+        shell: pwsh
+        run: |
+          $publishDir = "Flow.Launcher.Plugin.SlickFlow/bin/Release/win-x64/publish"
+          $zipPath = "Flow.Launcher.Plugin.SlickFlow.zip"
+          Compress-Archive -Path "$publishDir/*" -DestinationPath $zipPath -Force
+
+      - name: Upload release asset
+        uses: softprops/action-gh-release@v2
+        with:
+          files: Flow.Launcher.Plugin.SlickFlow.zip
