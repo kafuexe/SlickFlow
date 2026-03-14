@@ -44,19 +44,23 @@
   </ItemGroup>
 
   <Target Name="PostBuild" AfterTargets="Build">
-    <Copy SourceFiles="$(TargetDir)$(TargetFileName)" 
-          DestinationFolder="$(AppData)\FlowLauncher\Plugins\SlickFlow\" />
+    <Copy SourceFiles="$(TargetDir)$(TargetFileName)"
+          DestinationFolder="$(AppData)\FlowLauncher\Plugins\SlickFlow\"
+          ContinueOnError="WarnAndContinue" />
 
-    <Copy SourceFiles="$(ProjectDir)plugin.json" 
-          DestinationFolder="$(AppData)\FlowLauncher\Plugins\SlickFlow\" 
-          SkipUnchangedFiles="true"/>
+    <Copy SourceFiles="$(ProjectDir)plugin.json"
+          DestinationFolder="$(AppData)\FlowLauncher\Plugins\SlickFlow\"
+          SkipUnchangedFiles="true"
+          ContinueOnError="WarnAndContinue"/>
 
-    <Copy SourceFiles="$(ProjectDir)icon.ico" 
-          DestinationFolder="$(AppData)\FlowLauncher\Plugins\SlickFlow\" 
-          SkipUnchangedFiles="true"/>
+    <Copy SourceFiles="$(ProjectDir)icon.ico"
+          DestinationFolder="$(AppData)\FlowLauncher\Plugins\SlickFlow\"
+          SkipUnchangedFiles="true"
+          ContinueOnError="WarnAndContinue"/>
 
-    <Copy SourceFiles="@(AssetFiles)" 
-          DestinationFolder="$(AppData)\FlowLauncher\Plugins\SlickFlow\Assets" 
-          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="@(AssetFiles)"
+          DestinationFolder="$(AppData)\FlowLauncher\Plugins\SlickFlow\Assets"
+          SkipUnchangedFiles="true"
+          ContinueOnError="WarnAndContinue" />
   </Target>
 </Project>
