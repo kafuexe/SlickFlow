@@ -1,12 +1,17 @@
+using Flow.Launcher.Plugin.SlickFlow.Items;
+using Flow.Launcher.Plugin.SlickFlow.Items.Abstract;
+
 namespace Flow.Launcher.Plugin.SlickFlow.Commands.CommandHandlers;
 
 public class RemoveCommandHandler : ICommandHandler
 {
-    private readonly SlickFlow _plugin;
+    private readonly IItemRepository _itemRepo;
+    private readonly string _slickFlowIcon;
 
-    public RemoveCommandHandler(SlickFlow plugin)
+    public RemoveCommandHandler(IItemRepository itemRepo, string slickFlowIcon)
     {
-        _plugin = plugin;
+        _itemRepo = itemRepo;
+        _slickFlowIcon = slickFlowIcon;
     }
 
     public List<Result> Handle(string[] args)
@@ -18,20 +23,20 @@ public class RemoveCommandHandler : ICommandHandler
             {
                 Title = "Usage: remove <alias>",
                 Score = int.MaxValue - 1000,
-                IcoPath = _plugin._slickFlowIcon
+                IcoPath = _slickFlowIcon
             });
             return results;
         }
 
         var alias = args[0];
-        var item = _plugin._itemRepo.GetItemByAlias(alias);
+        var item = _itemRepo.GetItemByAlias(alias);
         if (item == null)
         {
             results.Add(new Result
             {
                 Title = $"No item found with alias '{alias}'",
                 Score = int.MaxValue - 1000,
-                IcoPath = _plugin._slickFlowIcon
+                IcoPath = _slickFlowIcon
             });
             return results;
         }
@@ -42,7 +47,7 @@ public class RemoveCommandHandler : ICommandHandler
             {
                 Title = $"Item only has one alias. Use 'delete {alias}' to delete the item instead.",
                 Score = int.MaxValue - 1000,
-                IcoPath = _plugin._slickFlowIcon
+                IcoPath = _slickFlowIcon
             });
             return results;
         }
@@ -51,10 +56,10 @@ public class RemoveCommandHandler : ICommandHandler
         {
             Title = $"Remove alias '{alias}' from item {item.Id}",
             Score = int.MaxValue - 1000,
-            IcoPath = _plugin._slickFlowIcon,
+            IcoPath = _slickFlowIcon,
             Action = _ =>
             {
-                _plugin._itemRepo.RemoveAlias(item.Id, alias);
+                _itemRepo.RemoveAlias(item.Id, alias);
                 return true;
             }
         });

@@ -1,14 +1,20 @@
 using Flow.Launcher.Plugin.SlickFlow.Items;
+using Flow.Launcher.Plugin.SlickFlow.Items.Abstract;
+using Flow.Launcher.Plugin.SlickFlow.items;
 
 namespace Flow.Launcher.Plugin.SlickFlow.Commands.CommandHandlers;
 
 public class AddCommandHandler : ICommandHandler
 {
-    private readonly SlickFlow _plugin;
+    private readonly IItemRepository _itemRepo;
+    private readonly ItemValidator _itemValidator;
+    private readonly string _slickFlowIcon;
 
-    public AddCommandHandler(SlickFlow plugin)
+    public AddCommandHandler(IItemRepository itemRepo, ItemValidator itemValidator, string slickFlowIcon)
     {
-        _plugin = plugin;
+        _itemRepo = itemRepo;
+        _itemValidator = itemValidator;
+        _slickFlowIcon = slickFlowIcon;
     }
 
     public List<Result> Handle(string[] args)
@@ -22,7 +28,7 @@ public class AddCommandHandler : ICommandHandler
             {
                 Title = "Usage: add <alias1|alias2> <file-or-url> [args...] [runas]",
                 Score = int.MaxValue - 1000,
-                IcoPath = _plugin._slickFlowIcon
+                IcoPath = _slickFlowIcon
             });
             return results;
         }
@@ -60,7 +66,7 @@ public class AddCommandHandler : ICommandHandler
         }
 
         // Prevent duplicate aliases
-        var validationResults = _plugin._itemValidator.ValidateAliases(aliases);
+        var validationResults = _itemValidator.ValidateAliases(aliases);
         if (validationResults.Any())
         {
             return validationResults;
@@ -72,7 +78,7 @@ public class AddCommandHandler : ICommandHandler
             Title = $"Add item: {string.Join(", ", aliases)}",
             SubTitle = $"File: {fileOrUrl} {fileArgs}".Trim(),
             Score = int.MaxValue - 1000,
-            IcoPath = _plugin._slickFlowIcon,
+            IcoPath = _slickFlowIcon,
             Action = _ =>
             {
                 var item = new Item
@@ -84,7 +90,7 @@ public class AddCommandHandler : ICommandHandler
                 };
 
                 // Add the item to the repository
-                _plugin._itemRepo.AddItem(item);
+                _itemRepo.AddItem(item);
 
                 return true;
             }

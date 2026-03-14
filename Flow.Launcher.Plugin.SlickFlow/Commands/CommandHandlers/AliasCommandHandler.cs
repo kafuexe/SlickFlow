@@ -1,14 +1,20 @@
 using Flow.Launcher.Plugin.SlickFlow.Items;
+using Flow.Launcher.Plugin.SlickFlow.Items.Abstract;
+using Flow.Launcher.Plugin.SlickFlow.items;
 
 namespace Flow.Launcher.Plugin.SlickFlow.Commands.CommandHandlers;
 
 public class AliasCommandHandler : ICommandHandler
 {
-    private readonly SlickFlow _plugin;
+    private readonly IItemRepository _itemRepo;
+    private readonly ItemValidator _itemValidator;
+    private readonly string _slickFlowIcon;
 
-    public AliasCommandHandler(SlickFlow plugin)
+    public AliasCommandHandler(IItemRepository itemRepo, ItemValidator itemValidator, string slickFlowIcon)
     {
-        _plugin = plugin;
+        _itemRepo = itemRepo;
+        _itemValidator = itemValidator;
+        _slickFlowIcon = slickFlowIcon;
     }
 
     public List<Result> Handle(string[] args)
@@ -21,17 +27,17 @@ public class AliasCommandHandler : ICommandHandler
             {
                 Title = "Usage: alias <existing-alias-or-id> <newAlias1|newAlias2>",
                 Score = int.MaxValue - 1000,
-                IcoPath = _plugin._slickFlowIcon
+                IcoPath = _slickFlowIcon
             });
             return results;
         }
 
         string target = args[0];
-        Item? item = _plugin._itemRepo.GetItemById(target) ?? _plugin._itemRepo.GetItemByAlias(target);
+        Item? item = _itemRepo.GetItemById(target) ?? _itemRepo.GetItemByAlias(target);
         if (item == null)
         {
             results.Add(new Result { Title = $"No item found with '{target}'",
-                IcoPath = _plugin._slickFlowIcon, Score = int.MaxValue - 1000 });
+                IcoPath = _slickFlowIcon, Score = int.MaxValue - 1000 });
             return results;
         }
 
@@ -40,7 +46,7 @@ public class AliasCommandHandler : ICommandHandler
             .Where(a => !string.IsNullOrWhiteSpace(a))
             .ToList();
 
-        var validationResults = _plugin._itemValidator.ValidateAliases(newAliases);
+        var validationResults = _itemValidator.ValidateAliases(newAliases);
         if (validationResults.Any())
         {
             return validationResults;
@@ -51,7 +57,7 @@ public class AliasCommandHandler : ICommandHandler
             Title = $"Add {newAliases.Count} alias(es) to item {item.Id}",
             SubTitle = $"Existing aliases: {string.Join(", ", item.Aliases)}",
             Score = int.MaxValue - 1000,
-            IcoPath = _plugin._slickFlowIcon,
+            IcoPath = _slickFlowIcon,
             Action = _ =>
             {
                 int addedCount = 0;
@@ -65,7 +71,7 @@ public class AliasCommandHandler : ICommandHandler
                 }
 
                 if (addedCount > 0)
-                    _plugin._itemRepo.UpdateItem(item);
+                    _itemRepo.UpdateItem(item);
 
                 return true;
             }

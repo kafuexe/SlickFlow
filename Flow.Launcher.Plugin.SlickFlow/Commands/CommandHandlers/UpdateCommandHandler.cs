@@ -1,14 +1,20 @@
 using Flow.Launcher.Plugin.SlickFlow.Items;
+using Flow.Launcher.Plugin.SlickFlow.Items.Abstract;
+using Flow.Launcher.Plugin.SlickFlow.items;
 
 namespace Flow.Launcher.Plugin.SlickFlow.Commands.CommandHandlers;
 
 public class UpdateCommandHandler : ICommandHandler
 {
-    private readonly SlickFlow _plugin;
+    private readonly IItemRepository _itemRepo;
+    private readonly ItemValidator _itemValidator;
+    private readonly string _slickFlowIcon;
 
-    public UpdateCommandHandler(SlickFlow plugin)
+    public UpdateCommandHandler(IItemRepository itemRepo, ItemValidator itemValidator, string slickFlowIcon)
     {
-        _plugin = plugin;
+        _itemRepo = itemRepo;
+        _itemValidator = itemValidator;
+        _slickFlowIcon = slickFlowIcon;
     }
 
     public List<Result> Handle(string[] args)
@@ -21,7 +27,7 @@ public class UpdateCommandHandler : ICommandHandler
             {
                 Score = int.MaxValue - 1000,
                 Title = "Usage: update <alias-or-id> <property> <value> [property value] ...",
-                IcoPath = _plugin._slickFlowIcon
+                IcoPath = _slickFlowIcon
             });
             return results;
         }
@@ -29,12 +35,12 @@ public class UpdateCommandHandler : ICommandHandler
         string target = args[0];
 
         // Just fetch the item for preview, don't change it yet
-        Item? item = _plugin._itemRepo.GetItemById(target) ?? _plugin._itemRepo.GetItemByAlias(target);
+        Item? item = _itemRepo.GetItemById(target) ?? _itemRepo.GetItemByAlias(target);
 
         if (item == null)
         {
             results.Add(new Result { Title = $"No item found with '{target}'",
-                IcoPath = _plugin._slickFlowIcon, Score = int.MaxValue - 1000 });
+                IcoPath = _slickFlowIcon, Score = int.MaxValue - 1000 });
             return results;
         }
 
@@ -47,13 +53,13 @@ public class UpdateCommandHandler : ICommandHandler
             updates[prop] = val;
         }
 
-        var invalidProps = updates.Keys.Where(k => !_plugin._itemValidator.IsValidProperty(k)).ToList();
+        var invalidProps = updates.Keys.Where(k => !_itemValidator.IsValidProperty(k)).ToList();
         if (invalidProps.Any())
         {
             results.Add(new Result
             {
                 Title = $"Invalid properties: {string.Join(", ", invalidProps)}",
-                IcoPath = _plugin._slickFlowIcon,
+                IcoPath = _slickFlowIcon,
                 Score = int.MaxValue - 1000
             });
             return results;
@@ -64,7 +70,7 @@ public class UpdateCommandHandler : ICommandHandler
         {
             Title = $"Update item {item.Id}",
             Score = int.MaxValue - 1000,
-            IcoPath = _plugin._slickFlowIcon,
+            IcoPath = _slickFlowIcon,
             SubTitle = $"Properties to update: {string.Join(", ", updates.Select(kv => $"{kv.Key}={kv.Value}"))}",
             Action = _ =>
             {
@@ -101,7 +107,7 @@ public class UpdateCommandHandler : ICommandHandler
                     }
                 }
 
-                _plugin._itemRepo.UpdateItem(item);
+                _itemRepo.UpdateItem(item);
                 return true;
             }
         });
