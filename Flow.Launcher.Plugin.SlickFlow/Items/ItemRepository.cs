@@ -1,12 +1,13 @@
 using System.IO;
 using System.Text.Json;
+using Flow.Launcher.Plugin.SlickFlow.Items.Abstract;
 
 namespace Flow.Launcher.Plugin.SlickFlow.Items;
 
 /// <summary>
 /// Provides methods for managing a collection of <see cref="Item"/> objects, including loading, saving, and CRUD operations.
 /// </summary>
-public class ItemRepository 
+public class ItemRepository : IItemRepository
 {
     private readonly string _path;
     private readonly List<Item> _items = new();
