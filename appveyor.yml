@@ -8,6 +8,9 @@ environment:
 build_script:
 - ps: dotnet publish -c Release -r win-x64 --no-self-contained Flow.Launcher.Plugin.SlickFlow/Flow.Launcher.Plugin.SlickFlow.csproj
 
+test_script:
+- ps: dotnet test --verbosity normal
+
 after_build:
 - ps: Compress-Archive -Path "Flow.Launcher.Plugin.SlickFlow\bin\Release\win-x64\publish\*" -DestinationPath "Flow.Launcher.Plugin.SlickFlow.zip"
 
