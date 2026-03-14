@@ -9,18 +9,12 @@ namespace Flow.Launcher.Plugin.SlickFlow.Settings
     {
         private const string SettingsFileName = "settings.json";
 
-        /// <summary>
-        /// Returns the full path to settings.json based on assembly-relative default directory.
-        /// </summary>
-        private static string GetSettingsFilePath()
+        private static string GetSettingsFilePath(string? baseDirectory = null)
         {
-            var defaultDir = GetDefaultDirectory();
-            return Path.Combine(defaultDir, SettingsFileName);
+            var dir = baseDirectory ?? GetDefaultDirectory();
+            return Path.Combine(dir, SettingsFileName);
         }
 
-        /// <summary>
-        /// Returns the default SlickFlow settings directory relative to the assembly.
-        /// </summary>
         private static string GetDefaultDirectory()
         {
             var assemblyDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)
@@ -28,86 +22,64 @@ namespace Flow.Launcher.Plugin.SlickFlow.Settings
             return Path.GetFullPath(Path.Combine(assemblyDir, "..", "..", "Settings", "SlickFlow"));
         }
 
-        /// <summary>
-        /// Loads settings.json or creates defaults if missing/corrupted.
-        /// </summary>
-        public static Settings Load()
+        public static Settings Load(string? baseDirectory = null)
         {
-            var path = GetSettingsFilePath();
+            var path = GetSettingsFilePath(baseDirectory);
 
             try
             {
                 if (!File.Exists(path))
-                    return CreateDefaultSettings();
+                    return CreateDefaultSettings(baseDirectory);
 
                 var json = File.ReadAllText(path);
                 var options = new JsonSerializerOptions { PropertyNameCaseInsensitive = true };
-                var settings = JsonSerializer.Deserialize<Settings>(json, options) ?? CreateDefaultSettings();
+                var settings = JsonSerializer.Deserialize<Settings>(json, options) ?? CreateDefaultSettings(baseDirectory);
 
-                ValidateAndFillDefaults(settings);
+                ValidateAndFillDefaults(settings, baseDirectory);
                 return settings;
             }
             catch
             {
-                // Corrupted file or other IO issues
-                return CreateDefaultSettings();
+                return CreateDefaultSettings(baseDirectory);
             }
         }
 
-        /// <summary>
-        /// Saves settings to settings.json.
-        /// </summary>
-        public static void Save(Settings settings)
+        public static void Save(Settings settings, string? baseDirectory = null)
         {
-            var path = GetSettingsFilePath();
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!); // ensure folder exists
+            var path = GetSettingsFilePath(baseDirectory);
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
             var options = new JsonSerializerOptions { WriteIndented = true };
             File.WriteAllText(path, JsonSerializer.Serialize(settings, options));
         }
 
-        #region Default Initialization
-
-        /// <summary>
-        /// Creates default settings with default DB file and icon folder.
-        /// </summary>
-        private static Settings CreateDefaultSettings()
+        private static Settings CreateDefaultSettings(string? baseDirectory = null)
         {
             var defaults = new Settings();
-            InitializeDefaultPaths(defaults);
-            Save(defaults);
+            InitializeDefaultPaths(defaults, baseDirectory);
+            Save(defaults, baseDirectory);
             return defaults;
         }
 
-        /// <summary>
-        /// Ensures DB file and icon folder exist, sets default paths if missing.
-        /// </summary>
-        private static void InitializeDefaultPaths(Settings settings)
+        private static void InitializeDefaultPaths(Settings settings, string? baseDirectory = null)
         {
-            var defaultDir = GetDefaultDirectory();
+            var defaultDir = baseDirectory ?? GetDefaultDirectory();
             Directory.CreateDirectory(defaultDir);
 
-            // DB file
             if (string.IsNullOrWhiteSpace(settings.DbFilePath))
                 settings.DbFilePath = Path.Combine(defaultDir, "SlickFlow.json");
 
             if (!File.Exists(settings.DbFilePath))
                 File.WriteAllText(settings.DbFilePath, "{}");
 
-            // Icon directory
             if (string.IsNullOrWhiteSpace(settings.IconDirPath))
                 settings.IconDirPath = Path.Combine(defaultDir, "icons");
 
             Directory.CreateDirectory(settings.IconDirPath);
         }
 
-        /// <summary>
-        /// Validates settings and fills in only missing paths, preserving user-set values.
-        /// </summary>
-        private static void ValidateAndFillDefaults(Settings settings)
+        private static void ValidateAndFillDefaults(Settings settings, string? baseDirectory = null)
         {
-            InitializeDefaultPaths(settings);
+            InitializeDefaultPaths(settings, baseDirectory);
         }
-
-        #endregion
     }
 }
