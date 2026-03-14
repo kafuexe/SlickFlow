@@ -39,6 +39,9 @@
     </Page>
   </ItemGroup>
 
+  <ItemGroup>
+    <InternalsVisibleTo Include="SlickFlow.Tests" />
+  </ItemGroup>
 
   <Target Name="PostBuild" AfterTargets="Build">
     <Copy SourceFiles="$(TargetDir)$(TargetFileName)" 
