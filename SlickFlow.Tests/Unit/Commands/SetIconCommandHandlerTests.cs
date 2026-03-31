@@ -4,6 +4,7 @@ using Flow.Launcher.Plugin.SlickFlow.Commands.CommandHandlers;
 using Flow.Launcher.Plugin.SlickFlow.Items;
 using Flow.Launcher.Plugin.SlickFlow.Items.Abstract;
 using Flow.Launcher.Plugin.SlickFlow.Utils;
+using Flow.Launcher.Plugin.SlickFlow.Utils.Icons;
 
 namespace SlickFlow.Tests.Unit.Commands;
 

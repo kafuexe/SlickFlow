@@ -7,6 +7,7 @@ using Flow.Launcher.Plugin.SlickFlow.items;
 using Flow.Launcher.Plugin.SlickFlow.Items;
 using Flow.Launcher.Plugin.SlickFlow.Settings;
 using Flow.Launcher.Plugin.SlickFlow.Utils;
+using Flow.Launcher.Plugin.SlickFlow.Utils.Icons;
 using Flow.Launcher.Plugin.SlickFlow.ViewModels.Settings;
 
 namespace Flow.Launcher.Plugin.SlickFlow;
