@@ -4,7 +4,7 @@ using System.IO;
 namespace Flow.Launcher.Plugin.SlickFlow.Items;
 public class Item
 {
-    public string Id { get; set; }
+    public string Id { get; set; } = string.Empty;
     public string Arguments { get; set; } = string.Empty;
     public string FileName { get; set; } = string.Empty;
     public string SubTitle { get; set; } = string.Empty;

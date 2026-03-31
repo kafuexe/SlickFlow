@@ -40,7 +40,7 @@ public class ItemViewModel : INotifyPropertyChanged
         SaveCommand = new RelayCommand(_ => Save(), _ => IsEditing);
         CancelCommand = new RelayCommand(_ => Cancel(), _ => IsEditing);
         AddAliasCommand = new RelayCommand(_ => AddAlias(), _ => IsEditing && !string.IsNullOrWhiteSpace(NewAliasInput));
-        RemoveAliasCommand = new RelayCommand(obj => RemoveAlias(obj as string), _ => IsEditing);
+        RemoveAliasCommand = new RelayCommand(obj => RemoveAlias(obj as string ?? string.Empty), _ => IsEditing);
         DeleteItemCommand = new RelayCommand(_ => DeleteItem());
 
     }
@@ -167,9 +167,9 @@ public class ItemViewModel : INotifyPropertyChanged
         }
     }
 
-    private ImageSource _icon;
-    
-    public ImageSource Icon
+    private ImageSource? _icon;
+
+    public ImageSource? Icon
     {
         get => _icon;
         private set

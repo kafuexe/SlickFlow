@@ -56,7 +56,7 @@ public class SettingsViewModel : INotifyPropertyChanged
 
     #region DB File Properties
 
-    private string _dbFilePath;
+    private string _dbFilePath = string.Empty;
     public string DbFilePath
     {
         get => _dbFilePath;
@@ -68,7 +68,7 @@ public class SettingsViewModel : INotifyPropertyChanged
         }
     }
 
-    private string _savedDbPath;
+    private string _savedDbPath = string.Empty;
     public string SavedDbPath
     {
         get => _savedDbPath;
@@ -84,7 +84,7 @@ public class SettingsViewModel : INotifyPropertyChanged
 
     #region Icon Directory Properties
 
-    private string _iconDirPath;
+    private string _iconDirPath = string.Empty;
     public string IconDirPath
     {
         get => _iconDirPath;
@@ -96,7 +96,7 @@ public class SettingsViewModel : INotifyPropertyChanged
         }
     }
 
-    private string _savedIconDirPath;
+    private string _savedIconDirPath = string.Empty;
     public string SavedIconDirPath
     {
         get => _savedIconDirPath;

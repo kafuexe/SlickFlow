@@ -17,18 +17,16 @@ namespace Flow.Launcher.Plugin.SlickFlow;
 public class SlickFlow : IPlugin, IContextMenu , ISettingProvider
 {
     #region Constants
-    private delegate List<Result> CommandHandler(string[] args);
-    internal PluginInitContext _context;
-    internal ItemRepository _itemRepo;
-    private Dictionary<string, CommandHandler> _commands;
+    internal PluginInitContext _context = null!;
+    internal ItemRepository _itemRepo = null!;
     public static string AssemblyDirectory { get; } =
         Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!;
-    
-    internal IconHelper _iconHelper ;
+
+    internal IconHelper _iconHelper = null!;
     internal readonly string _slickFlowIcon = Path.Combine(AssemblyDirectory, "icon.ico");
-    internal CommandProcessor _commandProcessor;
-    internal ItemSearcher _itemSearcher;
-    internal ItemValidator _itemValidator;
+    internal CommandProcessor _commandProcessor = null!;
+    internal ItemSearcher _itemSearcher = null!;
+    internal ItemValidator _itemValidator = null!;
     public Settings.Settings Settings { get; set; } = new();
 
     #endregion
