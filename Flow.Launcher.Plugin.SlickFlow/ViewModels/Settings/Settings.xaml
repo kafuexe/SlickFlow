@@ -76,26 +76,8 @@
         <!-- Search Bar -->
         <TextBox Grid.Row="1" Grid.Column="1"
                  Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                 Margin="6,0,2,4"
-                 Padding="2,0"
-                 VerticalAlignment="Center">
-            <TextBox.Style>
-                <Style TargetType="TextBox">
-                    <Style.Resources>
-                        <VisualBrush x:Key="SearchHint" AlignmentX="Left" AlignmentY="Center" Stretch="None">
-                            <VisualBrush.Visual>
-                                <TextBlock Text="Search" Foreground="Gray" Margin="4,0,0,0" />
-                            </VisualBrush.Visual>
-                        </VisualBrush>
-                    </Style.Resources>
-                    <Style.Triggers>
-                        <Trigger Property="Text" Value="">
-                            <Setter Property="Background" Value="{StaticResource SearchHint}" />
-                        </Trigger>
-                    </Style.Triggers>
-                </Style>
-            </TextBox.Style>
-        </TextBox>
+                 Margin="4,0,0,4"
+                 VerticalAlignment="Center" />
 
         <!-- Items List -->
         <ListBox Grid.Row="2" Grid.Column="1" Grid.RowSpan="4"
