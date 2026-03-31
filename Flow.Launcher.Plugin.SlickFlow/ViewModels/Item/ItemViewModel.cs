@@ -83,6 +83,12 @@ public class ItemViewModel : INotifyPropertyChanged
 
     #region Exposed Properties
 
+    public static List<KeyValuePair<int, string>> RunAsOptions { get; } = new()
+    {
+        new(0, "Normal"),
+        new(1, "Administrator"),
+    };
+
     public string AliasesString => string.Join(", ", Aliases);
 
     public string ArgsDisplay => string.IsNullOrWhiteSpace(Arguments) ? "" : "Args: " + Arguments;
