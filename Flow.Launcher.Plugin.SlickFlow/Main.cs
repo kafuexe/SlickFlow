@@ -86,7 +86,7 @@ public class SlickFlow : IPlugin, IContextMenu , ISettingProvider
             return new List<Result>();
 
         var builder = new ContextMenuBuilder();
-        return builder.Build(selectedResult, item);
+        return builder.Build(selectedResult, item, _itemRepo);
     }
 
 
@@ -150,7 +150,7 @@ public class SlickFlow : IPlugin, IContextMenu , ISettingProvider
                     {
                         try
                         {
-                            item.Execute(); 
+                            item.Execute(itemRepo: _itemRepo);
                             _itemRepo.UpdateItem(item); 
                         }
                         catch (Exception ex)

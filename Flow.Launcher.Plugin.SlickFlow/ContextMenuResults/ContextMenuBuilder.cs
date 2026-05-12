@@ -1,6 +1,7 @@
 using Flow.Launcher.Plugin.SlickFlow.ContextMenuResults.Abstract;
 using Flow.Launcher.Plugin.SlickFlow.ContextMenuResults.Results;
 using Flow.Launcher.Plugin.SlickFlow.Items;
+using Flow.Launcher.Plugin.SlickFlow.Items.Abstract;
 
 namespace Flow.Launcher.Plugin.SlickFlow.ContextMenuResults
 {
@@ -17,13 +18,13 @@ namespace Flow.Launcher.Plugin.SlickFlow.ContextMenuResults
             AliasesProvider.Provide
         };
 
-        public List<Result> Build(Result selectedResult, Item item)
+        public List<Result> Build(Result selectedResult, Item item, IItemRepository itemRepo)
         {
             var results = new List<Result>();
 
             foreach (var provider in _providers)
             {
-                var result = provider(selectedResult, item);
+                var result = provider(selectedResult, item, itemRepo);
                 if (result != null)
                     results.Add(result);
             }

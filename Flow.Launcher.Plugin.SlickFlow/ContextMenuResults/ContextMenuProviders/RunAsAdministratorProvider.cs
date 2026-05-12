@@ -1,11 +1,12 @@
 using System.IO;
 using Flow.Launcher.Plugin.SlickFlow.Items;
+using Flow.Launcher.Plugin.SlickFlow.Items.Abstract;
 
 namespace Flow.Launcher.Plugin.SlickFlow.ContextMenuResults.Results;
 
 public static class RunAsAdministratorProvider
 {
-    public static Result? Provide(Result selectedResult, Item item)
+    public static Result? Provide(Result selectedResult, Item item, IItemRepository itemRepo)
     {
         if (!ShouldShow(item))
             return null;
@@ -21,7 +22,7 @@ public static class RunAsAdministratorProvider
                 {
                     try
                     {
-                        item.Execute(forceAdminExec: true);
+                        item.Execute(forceAdminExec: true, itemRepo: itemRepo);
                     }
                     catch (Exception ex)
                     {
@@ -30,7 +31,7 @@ public static class RunAsAdministratorProvider
                     }
                 });
 
-                return true; 
+                return true;
             }
         };
     }

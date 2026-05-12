@@ -1,12 +1,13 @@
 using System.Diagnostics;
 using Microsoft.Win32;
 using Flow.Launcher.Plugin.SlickFlow.Items;
+using Flow.Launcher.Plugin.SlickFlow.Items.Abstract;
 
 namespace Flow.Launcher.Plugin.SlickFlow.ContextMenuResults.Results;
 
 public static class OpenIncognitoProvider
 {
-    public static Result? Provide(Result selectedResult, Item item)
+    public static Result? Provide(Result selectedResult, Item item, IItemRepository itemRepo)
     {
         if (string.IsNullOrWhiteSpace(item.FileName) || !item.IsUrl(item.FileName))
             return null;
