@@ -64,6 +64,10 @@ public class PromptModeHandler
         {
             new Result
             {
+                // Score must dominate any other plugin's result (web search, etc.) so
+                // the user lands on the prompt result on Enter. Without this, an empty
+                // Score (0) lets unrelated plugins outrank the active prompt.
+                Score = int.MaxValue,
                 Title = title,
                 SubTitle = subtitle,
                 IcoPath = item.IconPath,

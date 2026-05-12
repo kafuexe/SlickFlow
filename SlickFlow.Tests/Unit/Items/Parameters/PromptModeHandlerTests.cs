@@ -69,6 +69,22 @@ public class PromptModeHandlerTests
     }
 
     [Fact]
+    public void BuildResults_ResultHasMaxScore_SoItDominatesOtherPluginResults()
+    {
+        // Flow Launcher merges results across all plugins. Without a high Score,
+        // unrelated plugins (web search, etc.) outrank the active prompt and the
+        // user ends up triggering them instead of advancing the prompt.
+        var (repo, _, handler) = BuildHandler();
+        repo.Setup(r => r.GetItemByAlias("server")).Returns(
+            new Item("1", "http://localhost:<<port>>"));
+
+        var state = new PromptModeState("server", Array.Empty<(string, string)>(), "port", "8080");
+        var results = handler.BuildResults(state);
+
+        results[0].Score.Should().Be(int.MaxValue);
+    }
+
+    [Fact]
     public void BuildResults_LastPromptShowsLaunchPrompt()
     {
         var (repo, _, handler) = BuildHandler();
