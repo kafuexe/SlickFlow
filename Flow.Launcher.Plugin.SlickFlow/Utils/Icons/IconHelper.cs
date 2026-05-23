@@ -74,9 +74,17 @@ public sealed class IconHelper
                     return (true, targetPath);
                 }
             }
-            else if (File.Exists(pathOrUrl) || Directory.Exists(pathOrUrl))
+            else
             {
-                if (TrySaveFromLocalPath(pathOrUrl, targetPath))
+                string localPath = pathOrUrl;
+                if (!File.Exists(localPath) && !Directory.Exists(localPath)
+                    && ExecutablePathResolver.TryResolve(pathOrUrl, out var resolved))
+                {
+                    localPath = resolved;
+                }
+
+                if ((File.Exists(localPath) || Directory.Exists(localPath))
+                    && TrySaveFromLocalPath(localPath, targetPath))
                 {
                     _attempts.TryRemove(attemptKey, out _);
                     return (true, targetPath);
