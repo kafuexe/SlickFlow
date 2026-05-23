@@ -2,6 +2,7 @@ using System;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Windows.Input;
 using Flow.Launcher.Plugin.SlickFlow.Items;
 using Flow.Launcher.Plugin.SlickFlow.Settings;
@@ -13,7 +14,21 @@ public class SettingsViewModel : INotifyPropertyChanged
 {
     private readonly Plugin.SlickFlow.Settings.Settings _settings;
     private readonly ItemRepository _repo;
+    private List<ItemViewModel> _allItems = new();
     public ObservableCollection<ItemViewModel> Items { get; } = new();
+
+    private string _searchText = string.Empty;
+    public string SearchText
+    {
+        get => _searchText;
+        set
+        {
+            if (_searchText == value) return;
+            _searchText = value;
+            OnPropertyChanged(nameof(SearchText));
+            FilterItems();
+        }
+    }
 
     public SettingsViewModel(ItemRepository repo)
     {
@@ -41,7 +56,7 @@ public class SettingsViewModel : INotifyPropertyChanged
 
     #region DB File Properties
 
-    private string _dbFilePath;
+    private string _dbFilePath = string.Empty;
     public string DbFilePath
     {
         get => _dbFilePath;
@@ -53,7 +68,7 @@ public class SettingsViewModel : INotifyPropertyChanged
         }
     }
 
-    private string _savedDbPath;
+    private string _savedDbPath = string.Empty;
     public string SavedDbPath
     {
         get => _savedDbPath;
@@ -69,7 +84,7 @@ public class SettingsViewModel : INotifyPropertyChanged
 
     #region Icon Directory Properties
 
-    private string _iconDirPath;
+    private string _iconDirPath = string.Empty;
     public string IconDirPath
     {
         get => _iconDirPath;
@@ -81,7 +96,7 @@ public class SettingsViewModel : INotifyPropertyChanged
         }
     }
 
-    private string _savedIconDirPath;
+    private string _savedIconDirPath = string.Empty;
     public string SavedIconDirPath
     {
         get => _savedIconDirPath;
@@ -162,15 +177,28 @@ public class SettingsViewModel : INotifyPropertyChanged
 
     private void ReloadItems()
     {
-        Items.Clear();
+        _allItems.Clear();
         var tempItems = _repo.GetAllItems();
         tempItems.Reverse();
         foreach (var item in tempItems)
         {
             var vm = new ItemViewModel(item, _repo);
             vm.Deleted += ReloadItems;
-            Items.Add(vm);
+            _allItems.Add(vm);
         }
+        FilterItems();
+    }
+
+    private void FilterItems()
+    {
+        Items.Clear();
+        var filtered = string.IsNullOrWhiteSpace(_searchText)
+            ? _allItems
+            : _allItems.Where(i => i.AliasesString
+                .Contains(_searchText, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+        foreach (var item in filtered)
+            Items.Add(item);
     }
 
     private void AddItem()

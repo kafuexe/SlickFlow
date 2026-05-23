@@ -5,8 +5,10 @@ using Flow.Launcher.Plugin.SlickFlow.Commands;
 using Flow.Launcher.Plugin.SlickFlow.ContextMenuResults;
 using Flow.Launcher.Plugin.SlickFlow.items;
 using Flow.Launcher.Plugin.SlickFlow.Items;
+using Flow.Launcher.Plugin.SlickFlow.Items.Parameters;
 using Flow.Launcher.Plugin.SlickFlow.Settings;
 using Flow.Launcher.Plugin.SlickFlow.Utils;
+using Flow.Launcher.Plugin.SlickFlow.Utils.Icons;
 using Flow.Launcher.Plugin.SlickFlow.ViewModels.Settings;
 
 namespace Flow.Launcher.Plugin.SlickFlow;
@@ -17,18 +19,16 @@ namespace Flow.Launcher.Plugin.SlickFlow;
 public class SlickFlow : IPlugin, IContextMenu , ISettingProvider
 {
     #region Constants
-    private delegate List<Result> CommandHandler(string[] args);
-    internal PluginInitContext _context;
-    internal ItemRepository _itemRepo;
-    private Dictionary<string, CommandHandler> _commands;
+    internal PluginInitContext _context = null!;
+    internal ItemRepository _itemRepo = null!;
     public static string AssemblyDirectory { get; } =
         Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!;
-    
-    internal IconHelper _iconHelper ;
+
+    internal IconHelper _iconHelper = null!;
     internal readonly string _slickFlowIcon = Path.Combine(AssemblyDirectory, "icon.ico");
-    internal CommandProcessor _commandProcessor;
-    internal ItemSearcher _itemSearcher;
-    internal ItemValidator _itemValidator;
+    internal CommandProcessor _commandProcessor = null!;
+    internal ItemSearcher _itemSearcher = null!;
+    internal ItemValidator _itemValidator = null!;
     public Settings.Settings Settings { get; set; } = new();
 
     #endregion
@@ -45,10 +45,9 @@ public class SlickFlow : IPlugin, IContextMenu , ISettingProvider
         Settings = SettingsManager.Load();
         _iconHelper = new IconHelper(Settings.IconDirPath);
         _itemRepo = new ItemRepository(Settings.DbFilePath);
-        
-        _commandProcessor = new CommandProcessor(this);
+        _itemValidator = new ItemValidator(_itemRepo, _slickFlowIcon);
+        _commandProcessor = new CommandProcessor(_itemRepo, _itemValidator, _iconHelper, _slickFlowIcon);
         _itemSearcher = new ItemSearcher();
-        _itemValidator = new ItemValidator(this);
         _context.API.LogInfo("SlickFlow", "Plugin loaded successfully.");
         
     }
@@ -60,6 +59,17 @@ public class SlickFlow : IPlugin, IContextMenu , ISettingProvider
     /// <returns>A list of matching results</returns>
     public List<Result> Query(Query query)
     {
+        // Prompt-mode short-circuit: if the user is filling placeholders for an
+        // item, the bar holds a special "<alias> | k=v | ... | name: input" pattern.
+        // Bypass commands and normal search when we recognize it.
+        var promptState = PromptModeParser.TryParse(query.Search);
+        if (promptState != null)
+        {
+            var promptResults = new PromptModeHandler(_itemRepo, _context.API).BuildResults(promptState);
+            if (promptResults.Count > 0)
+                return promptResults;
+        }
+
         var results = new List<Result>();
         var items = _itemRepo.GetAllItems();
         var parts = CommandParser.SplitArgs(query.Search);
@@ -88,7 +98,7 @@ public class SlickFlow : IPlugin, IContextMenu , ISettingProvider
             return new List<Result>();
 
         var builder = new ContextMenuBuilder();
-        return builder.Build(selectedResult, item);
+        return builder.Build(selectedResult, item, _itemRepo);
     }
 
 
@@ -148,12 +158,15 @@ public class SlickFlow : IPlugin, IContextMenu , ISettingProvider
                 ContextData = this,
                 Action = _ =>
                 {
+                    if (TryEnterPromptMode(name, item))
+                        return false;
+
                     Task.Run(() =>
                     {
                         try
                         {
-                            item.Execute(); 
-                            _itemRepo.UpdateItem(item); 
+                            item.Execute(itemRepo: _itemRepo);
+                            _itemRepo.UpdateItem(item);
                         }
                         catch (Exception ex)
                         {
@@ -162,7 +175,7 @@ public class SlickFlow : IPlugin, IContextMenu , ISettingProvider
                         }
                     });
 
-                    return true; 
+                    return true;
                 }
             });
         }
@@ -183,5 +196,34 @@ public class SlickFlow : IPlugin, IContextMenu , ISettingProvider
         return false;
     }
 
+    private bool TryEnterPromptMode(string alias, Item item)
+    {
+        // Only items with placeholders (directly or via meta-chain leaves) trigger
+        // sequential prompts. The schema collection is cycle-safe and throws on
+        // unresolved aliases - either way, fall back to direct execution.
+        if (!item.IsParameterized && !item.IsMetaItem)
+            return false;
 
+        IReadOnlyList<Placeholder> schema;
+        try
+        {
+            schema = PlaceholderSchema.From(item, _itemRepo);
+        }
+        catch (InvalidOperationException)
+        {
+            return false;
+        }
+
+        if (schema.Count == 0)
+            return false;
+
+        var first = schema[0];
+        var newQuery = PromptModeParser.Format(
+            alias,
+            filled: Array.Empty<(string, string)>(),
+            nextName: first.Name,
+            nextInitial: first.Default ?? "");
+        _context.API.ChangeQuery(newQuery, requery: true);
+        return true;
+    }
 }

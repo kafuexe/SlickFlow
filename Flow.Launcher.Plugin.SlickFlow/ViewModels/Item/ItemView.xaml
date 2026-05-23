@@ -118,6 +118,16 @@
                     </StackPanel>
                 </StackPanel>
 
+                <!-- RUN AS -->
+                <StackPanel Margin="0,0,0,4"
+                        Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}">
+                    <TextBlock Text="Run As:" FontWeight="Bold" Margin="0,0,0,2" />
+                    <ComboBox ItemsSource="{Binding RunAsOptions}"
+                              SelectedValue="{Binding RunAs}"
+                              SelectedValuePath="Key"
+                              DisplayMemberPath="Value" />
+                </StackPanel>
+
                 <!-- ICON PATH EDIT (moved to bottom) -->
                 <StackPanel Orientation="Vertical" Margin="0,0,0,4"
                         Visibility="{Binding IsEditing, Converter={StaticResource BoolToVis}}">

@@ -73,8 +73,14 @@
             FontWeight="Bold"
             Margin="4,4,0,4" />
 
+        <!-- Search Bar -->
+        <TextBox Grid.Row="1" Grid.Column="1"
+                 Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                 Margin="4,0,0,4"
+                 VerticalAlignment="Center" />
+
         <!-- Items List -->
-        <ListBox Grid.Row="1" Grid.Column="1" Grid.RowSpan="5"
+        <ListBox Grid.Row="2" Grid.Column="1" Grid.RowSpan="4"
             ItemsSource="{Binding Items}"
             MaxHeight="500"
             HorizontalContentAlignment="Stretch"

@@ -1,13 +1,14 @@
 using System.Diagnostics;
 using System.IO;
 using Flow.Launcher.Plugin.SlickFlow.Items;
+using Flow.Launcher.Plugin.SlickFlow.Items.Abstract;
 
 namespace Flow.Launcher.Plugin.SlickFlow.ContextMenuResults.Results;
 
 
 public static class OpenPathProvider 
 {
-    public static Result? Provide(Result selectedResult, Item item)
+    public static Result? Provide(Result selectedResult, Item item, IItemRepository itemRepo)
     {
         var path = item.FileName;
 

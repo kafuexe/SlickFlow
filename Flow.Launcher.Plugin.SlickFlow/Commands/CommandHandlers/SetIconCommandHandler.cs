@@ -1,14 +1,21 @@
 using Flow.Launcher.Plugin.SlickFlow.Items;
+using Flow.Launcher.Plugin.SlickFlow.Items.Abstract;
+using Flow.Launcher.Plugin.SlickFlow.Utils;
+using Flow.Launcher.Plugin.SlickFlow.Utils.Icons;
 
 namespace Flow.Launcher.Plugin.SlickFlow.Commands.CommandHandlers;
 
 public class SetIconCommandHandler : ICommandHandler
 {
-    private readonly SlickFlow _plugin;
+    private readonly IItemRepository _itemRepo;
+    private readonly IconHelper _iconHelper;
+    private readonly string _slickFlowIcon;
 
-    public SetIconCommandHandler(SlickFlow plugin)
+    public SetIconCommandHandler(IItemRepository itemRepo, IconHelper iconHelper, string slickFlowIcon)
     {
-        _plugin = plugin;
+        _itemRepo = itemRepo;
+        _iconHelper = iconHelper;
+        _slickFlowIcon = slickFlowIcon;
     }
 
     public List<Result> Handle(string[] args)
@@ -21,7 +28,7 @@ public class SetIconCommandHandler : ICommandHandler
             {
                 Title = "Usage: seticon <alias-or-id> <icon-path-or-url>",
                 Score = int.MaxValue - 1000,
-                IcoPath = _plugin._slickFlowIcon
+                IcoPath = _slickFlowIcon
             });
             return results;
         }
@@ -29,11 +36,11 @@ public class SetIconCommandHandler : ICommandHandler
         string target = args[0];
         string iconSource = string.Join(' ', args.Skip(1));
 
-        Item? item = _plugin._itemRepo.GetItemById(target) ?? _plugin._itemRepo.GetItemByAlias(target);
+        Item? item = _itemRepo.GetItemById(target) ?? _itemRepo.GetItemByAlias(target);
 
         if (item == null)
         {
-            results.Add(new Result { Title = $"No item found with '{target}'", IcoPath = _plugin._slickFlowIcon, Score = int.MaxValue - 1000 });
+            results.Add(new Result { Title = $"No item found with '{target}'", IcoPath = _slickFlowIcon, Score = int.MaxValue - 1000 });
             return results;
         }
 
@@ -42,14 +49,14 @@ public class SetIconCommandHandler : ICommandHandler
             Title = $"Set custom icon for item {item.Id}",
             SubTitle = $"Icon source: {iconSource}",
             Score = int.MaxValue - 1000,
-            IcoPath = _plugin._slickFlowIcon,
+            IcoPath = _slickFlowIcon,
             Action = _ =>
             {
-                string newIconPath = _plugin._iconHelper.SetCustomIcon(iconSource, item.Id);
+                string newIconPath = _iconHelper.SetCustomIcon(iconSource, item.Id);
                 if (!string.IsNullOrEmpty(newIconPath))
                 {
                     item.IconPath = newIconPath;
-                    _plugin._itemRepo.UpdateItem(item);
+                    _itemRepo.UpdateItem(item);
                     return true;
                 }
                 return false;

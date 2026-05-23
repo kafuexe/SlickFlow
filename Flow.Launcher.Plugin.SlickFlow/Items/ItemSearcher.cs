@@ -7,6 +7,9 @@ public class ItemSearcher : IItemSearcher
 {
     public List<(string name, int score, Item item)> Search(string query, List<Item> items)
     {
+        if (string.IsNullOrWhiteSpace(query))
+            return new List<(string, int, Item)>();
+
         var results = new List<(string, int, Item)>();
         var queryLower = query.ToLower();
 
