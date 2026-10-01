@@ -207,7 +207,7 @@ SlickRun variables in Filename and Parameters become placeholders:
 | SlickRun | SlickFlow | Meaning |
 |---|---|---|
 | `$W$` | `<<query>>` | text typed after the MagicWord |
-| `$I$` | `<<input>>` | text typed after the MagicWord (SlickRun's unencoded variant) |
+| `$I$` | `<<query>>` | same typed text as `$W$` (SlickRun's unencoded variant), so both share one prompt |
 | `$C$` | `<<$clip>>` | clipboard contents |
 
 Any other `$X$` variable is left as-is and listed as a warning in the summary. Note that SlickFlow does not URL-encode placeholder values the way SlickRun does for `$W$`.

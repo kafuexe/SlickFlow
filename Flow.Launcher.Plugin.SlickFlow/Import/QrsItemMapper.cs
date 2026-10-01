@@ -28,7 +28,7 @@ public sealed record QrsMapResult(Item? Item, IReadOnlyList<string> Warnings, st
 /// <para>Variable translation (in Filename and Params):</para>
 /// <list type="bullet">
 /// <item><c>$W$</c> (text typed after the MagicWord, URL-encoded by SlickRun) → <c>&lt;&lt;query&gt;&gt;</c></item>
-/// <item><c>$I$</c> (the same typed text, unencoded) → <c>&lt;&lt;input&gt;&gt;</c></item>
+/// <item><c>$I$</c> (the same typed text, unencoded) → <c>&lt;&lt;query&gt;&gt;</c>, so an entry using both prompts once</item>
 /// <item><c>$C$</c> (clipboard contents) → <c>&lt;&lt;$clip&gt;&gt;</c> (built-in token)</item>
 /// <item>Any other <c>$X$</c> is left untouched and reported as a warning.</item>
 /// </list>
@@ -36,7 +36,6 @@ public sealed record QrsMapResult(Item? Item, IReadOnlyList<string> Warnings, st
 public static class QrsItemMapper
 {
     public const string QueryPlaceholder = "<<query>>";
-    public const string InputPlaceholder = "<<input>>";
     public const string ClipboardPlaceholder = "<<$clip>>";
 
     // $NAME$ where NAME starts with a letter, so "$5" or "$env:PATH" are not treated as variables.
@@ -113,8 +112,8 @@ public static class QrsItemMapper
         {
             switch (m.Groups[1].Value.ToUpperInvariant())
             {
-                case "W": return QueryPlaceholder;
-                case "I": return InputPlaceholder;
+                case "W":
+                case "I": return QueryPlaceholder;
                 case "C": return ClipboardPlaceholder;
                 default:
                     unknown.Add(m.Value);

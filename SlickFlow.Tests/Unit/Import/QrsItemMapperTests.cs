@@ -109,7 +109,7 @@ public class QrsItemMapperTests
             ("Params", "--text \"$I$\" --clip $C$")));
 
         result.Item!.FileName.Should().Be("https://google.com/search?q=<<query>>");
-        result.Item.Arguments.Should().Be("--text \"<<input>>\" --clip <<$clip>>");
+        result.Item.Arguments.Should().Be("--text \"<<query>>\" --clip <<$clip>>");
         result.Warnings.Should().BeEmpty();
     }
 
