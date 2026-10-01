@@ -185,6 +185,35 @@ add home explorer "<<$env:USERPROFILE>>"
 
 ---
 
+## 📥 Import from SlickRun
+
+Coming from SlickRun? Open **Flow Launcher → Settings → Plugins → SlickFlow** and click **Import from SlickRun (.qrs)…**. The file picker opens in `%APPDATA%\SlickRun` when it exists; pick your live database (`SlickRun.srl`) or an exported shortcut pack (`*.qrs`) — both use the same format.
+
+The import is **additive**: it only adds new items and never changes or deletes existing ones. A MagicWord whose name already exists as an alias (case-insensitive) is skipped, as are duplicates within the file (first one wins) and entries without a filename. When it finishes you get a summary such as `Imported 42, skipped 3 (alias already exists: g, mail, calc).`
+
+| SlickRun | SlickFlow |
+|---|---|
+| MagicWord (`[NAME]`; `[A,B]` gives two aliases) | Aliases (lower-cased) |
+| Filename | FileName |
+| Parameters (`Params`) | Arguments |
+| Startup Path (`Path`) | WorkingDir |
+| Notes | SubTitle |
+| Run As (`UseRunAs`) | RunAs (elevated only; other accounts fall back to normal) |
+| Start Mode (`StartMode`) | StartMode (normal / minimized / maximized) |
+| Icon | IconPath (copied into the SlickFlow icon folder, only if the file exists) |
+
+SlickRun variables in Filename and Parameters become placeholders:
+
+| SlickRun | SlickFlow | Meaning |
+|---|---|---|
+| `$W$` | `<<query>>` | text typed after the MagicWord |
+| `$I$` | `<<input>>` | text typed after the MagicWord (SlickRun's unencoded variant) |
+| `$C$` | `<<$clip>>` | clipboard contents |
+
+Any other `$X$` variable is left as-is and listed as a warning in the summary. Note that SlickFlow does not URL-encode placeholder values the way SlickRun does for `$W$`.
+
+---
+
 ## 📚 Examples
 
 ```bash

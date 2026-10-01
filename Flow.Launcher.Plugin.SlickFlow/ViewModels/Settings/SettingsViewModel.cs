@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Windows.Input;
+using Flow.Launcher.Plugin.SlickFlow.Import;
 using Flow.Launcher.Plugin.SlickFlow.Items;
 using Flow.Launcher.Plugin.SlickFlow.Settings;
 using Flow.Launcher.Plugin.SlickFlow.Utils;
@@ -22,6 +23,8 @@ public class SettingsViewModel : INotifyPropertyChanged
 {
     private readonly Plugin.SlickFlow.Settings.Settings _settings;
     private readonly ItemRepository _repo;
+    private readonly ISettingsDialogService _dialogs;
+    private readonly string _slickRunDir;
     private List<ItemViewModel> _allItems = new();
 
     private ObservableCollection<ItemViewModel> _items = new();
@@ -68,10 +71,16 @@ public class SettingsViewModel : INotifyPropertyChanged
         }
     }
 
-    public SettingsViewModel(ItemRepository repo)
+    /// <param name="repo">The item repository.</param>
+    /// <param name="dialogs">Dialog service; defaults to the WinForms implementation.</param>
+    /// <param name="slickRunDir">Folder the SlickRun import dialog opens in; defaults to %APPDATA%\SlickRun.</param>
+    public SettingsViewModel(ItemRepository repo, ISettingsDialogService? dialogs = null, string? slickRunDir = null)
     {
         _settings = SettingsManager.Load();
         _repo = repo;
+        _dialogs = dialogs ?? new SettingsDialogService();
+        _slickRunDir = slickRunDir ?? Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SlickRun");
 
         // DB file
         _dbFilePath = _settings.DbFilePath;
@@ -92,6 +101,7 @@ public class SettingsViewModel : INotifyPropertyChanged
         BrowsePythonCommand = new RelayCommand(_ => BrowsePython());
         ReloadItemsCommand = new RelayCommand(_ => ReloadItems());
         AddItemCommand = new RelayCommand(_ => AddItem());
+        ImportSlickRunCommand = new RelayCommand(_ => ImportSlickRun());
         //Items:
         ReloadItems();
 
@@ -189,6 +199,7 @@ public class SettingsViewModel : INotifyPropertyChanged
     public ICommand BrowsePythonCommand { get; }
     public ICommand ReloadItemsCommand { get; }
     public ICommand AddItemCommand { get; }
+    public ICommand ImportSlickRunCommand { get; }
 
     #endregion
 
@@ -332,6 +343,34 @@ public class SettingsViewModel : INotifyPropertyChanged
         _repo.AddItem(newItem);
         ReloadItems();
 
+    }
+
+    /// <summary>
+    /// Additively imports SlickRun MagicWords from a user-picked .qrs / .srl file, refreshes the
+    /// list once (a single collection swap, see <see cref="FilterItems"/>) and shows a summary.
+    /// </summary>
+    private void ImportSlickRun()
+    {
+        var initialDir = Directory.Exists(_slickRunDir) ? _slickRunDir : null;
+        var path = _dialogs.PickSlickRunFile(initialDir);
+        if (string.IsNullOrEmpty(path))
+            return;
+
+        SlickRunImportResult result;
+        try
+        {
+            result = new SlickRunImporter(_repo, _settings.IconDirPath).ImportFile(path);
+        }
+        catch (Exception ex)
+        {
+            _dialogs.ShowMessage("Import from SlickRun", $"Could not import '{path}':{Environment.NewLine}{ex.Message}", isError: true);
+            return;
+        }
+
+        if (result.ImportedCount > 0)
+            ReloadItems();
+
+        _dialogs.ShowMessage("Import from SlickRun", result.ToSummary());
     }
 
     #endregion
