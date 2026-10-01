@@ -13,6 +13,8 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" /> <!-- filler -->
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
@@ -60,8 +62,29 @@
                     Command="{Binding BrowseIconFolderCommand}" />
         </Grid>
 
+        <!-- Python Interpreter Label -->
+        <TextBlock Grid.Row="4" Grid.Column="0" Text="Python Interpreter (python.exe or install folder):"
+                   Margin="0,6,0,0" VerticalAlignment="Center" />
+
+        <!-- Python Interpreter Path + Browse -->
+        <Grid Grid.Row="5" Grid.Column="0" Margin="0,4,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <TextBox Grid.Column="0"
+                     VerticalAlignment="Center"
+                     Text="{Binding PythonPath}" />
+
+            <Button Grid.Column="1"
+                    Content="Browse"
+                    Margin="6,0,0,0"
+                    Command="{Binding BrowsePythonCommand}" />
+        </Grid>
+
         <!-- Action Buttons -->
-        <StackPanel Grid.Row="4" Grid.Column="0" Orientation="Horizontal" Margin="0,6,0,0">
+        <StackPanel Grid.Row="6" Grid.Column="0" Orientation="Horizontal" Margin="0,6,0,0">
             <Button Content="Save" Width="80" Command="{Binding SaveCommand}" />
             <Button Content="Add Item" Width="90" Margin="6,0,0,0" Command="{Binding AddItemCommand}" />
             <Button Content="Refresh" Width="80" Margin="6,0,0,0" Command="{Binding ReloadItemsCommand}" />
@@ -75,19 +98,20 @@
 
         <!-- Search Bar -->
         <TextBox Grid.Row="1" Grid.Column="1"
-                 Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                 Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged, Delay=150}"
                  Margin="4,0,0,4"
                  VerticalAlignment="Center" />
 
         <!-- Items List -->
-        <ListBox Grid.Row="2" Grid.Column="1" Grid.RowSpan="4"
+        <ListBox Grid.Row="2" Grid.Column="1" Grid.RowSpan="6"
             ItemsSource="{Binding Items}"
             MaxHeight="500"
             HorizontalContentAlignment="Stretch"
             ScrollViewer.VerticalScrollBarVisibility="Auto"
             VirtualizingPanel.IsVirtualizing="True"
             VirtualizingPanel.VirtualizationMode="Recycling"
-            ScrollViewer.CanContentScroll="False">
+            VirtualizingPanel.ScrollUnit="Pixel"
+            ScrollViewer.CanContentScroll="True">
             <ListBox.ItemContainerStyle>
                 <Style TargetType="ListBoxItem">
                     <Setter Property="HorizontalAlignment" Value="Stretch" />

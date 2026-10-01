@@ -15,7 +15,17 @@ public class SettingsViewModel : INotifyPropertyChanged
     private readonly Plugin.SlickFlow.Settings.Settings _settings;
     private readonly ItemRepository _repo;
     private List<ItemViewModel> _allItems = new();
-    public ObservableCollection<ItemViewModel> Items { get; } = new();
+
+    private ObservableCollection<ItemViewModel> _items = new();
+    public ObservableCollection<ItemViewModel> Items
+    {
+        get => _items;
+        private set
+        {
+            _items = value;
+            OnPropertyChanged(nameof(Items));
+        }
+    }
 
     private string _searchText = string.Empty;
     public string SearchText
@@ -43,10 +53,14 @@ public class SettingsViewModel : INotifyPropertyChanged
         _iconDirPath = _settings.IconDirPath ;
         SavedIconDirPath = _settings.IconDirPath ;
 
+        // Python installation
+        _pythonPath = _settings.PythonPath;
+
         // Commands
         SaveCommand = new RelayCommand(_ => Save());
         BrowseDbFolderCommand = new RelayCommand(_ => BrowseDbFile());
         BrowseIconFolderCommand = new RelayCommand(_ => BrowseIconFolder());
+        BrowsePythonCommand = new RelayCommand(_ => BrowsePython());
         ReloadItemsCommand = new RelayCommand(_ => ReloadItems());
         AddItemCommand = new RelayCommand(_ => AddItem());
         //Items:
@@ -110,11 +124,28 @@ public class SettingsViewModel : INotifyPropertyChanged
 
     #endregion
 
+    #region Python Properties
+
+    private string _pythonPath = string.Empty;
+    public string PythonPath
+    {
+        get => _pythonPath;
+        set
+        {
+            if (_pythonPath == value) return;
+            _pythonPath = value;
+            OnPropertyChanged(nameof(PythonPath));
+        }
+    }
+
+    #endregion
+
     #region Commands
 
     public ICommand SaveCommand { get; }
     public ICommand BrowseDbFolderCommand { get; }
     public ICommand BrowseIconFolderCommand { get; }
+    public ICommand BrowsePythonCommand { get; }
     public ICommand ReloadItemsCommand { get; }
     public ICommand AddItemCommand { get; }
 
@@ -126,11 +157,37 @@ public class SettingsViewModel : INotifyPropertyChanged
     {
         _settings.DbFilePath = DbFilePath ?? string.Empty;
         _settings.IconDirPath = IconDirPath ?? string.Empty;
+        _settings.PythonPath = PythonPath ?? string.Empty;
 
         SettingsManager.Save(_settings);
+        ScriptLauncher.PythonPath = _settings.PythonPath;
 
         SavedDbPath = _settings.DbFilePath;
         SavedIconDirPath = _settings.IconDirPath;
+    }
+
+    private void BrowsePython()
+    {
+        try
+        {
+            using var dlg = new OpenFileDialog
+            {
+                Title = "Select python.exe",
+                Filter = "Python interpreter (python.exe)|python.exe|Executables (*.exe)|*.exe",
+                FileName = "python.exe"
+            };
+
+            if (!string.IsNullOrWhiteSpace(PythonPath))
+            {
+                var dir = Directory.Exists(PythonPath) ? PythonPath : Path.GetDirectoryName(PythonPath);
+                if (!string.IsNullOrEmpty(dir) && Directory.Exists(dir))
+                    dlg.InitialDirectory = dir;
+            }
+
+            if (dlg.ShowDialog() == DialogResult.OK)
+                PythonPath = dlg.FileName;
+        }
+        catch { }
     }
 
     private void BrowseDbFile()
@@ -191,14 +248,14 @@ public class SettingsViewModel : INotifyPropertyChanged
 
     private void FilterItems()
     {
-        Items.Clear();
         var filtered = string.IsNullOrWhiteSpace(_searchText)
             ? _allItems
             : _allItems.Where(i => i.AliasesString
-                .Contains(_searchText, StringComparison.OrdinalIgnoreCase))
-                .ToList();
-        foreach (var item in filtered)
-            Items.Add(item);
+                .Contains(_searchText, StringComparison.OrdinalIgnoreCase));
+
+        // Swap the whole collection so the ListBox gets a single reset
+        // instead of one CollectionChanged (and layout pass) per item.
+        Items = new ObservableCollection<ItemViewModel>(filtered);
     }
 
     private void AddItem()
