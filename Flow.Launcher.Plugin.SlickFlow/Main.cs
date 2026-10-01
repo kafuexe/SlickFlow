@@ -201,7 +201,8 @@ public class SlickFlow : IPlugin, IContextMenu , ISettingProvider
     private bool TryEnterPromptMode(string alias, Item item)
     {
         // Only items with placeholders (directly or via meta-chain leaves) trigger
-        // sequential prompts. The schema collection is cycle-safe and throws on
+        // sequential prompts. Built-in tokens ($clip, $date, ...) are excluded from
+        // the schema, so token-only items fall through to direct execution. The schema collection is cycle-safe and throws on
         // unresolved aliases - either way, fall back to direct execution.
         if (!item.IsParameterized && !item.IsMetaItem)
             return false;
@@ -219,12 +220,7 @@ public class SlickFlow : IPlugin, IContextMenu , ISettingProvider
         if (schema.Count == 0)
             return false;
 
-        var first = schema[0];
-        var newQuery = PromptModeParser.Format(
-            alias,
-            filled: Array.Empty<(string, string)>(),
-            nextName: first.Name,
-            nextInitial: first.Default ?? "");
+        var newQuery = PromptModeHandler.FormatEntryQuery(alias, schema[0], SystemTokenSources.Instance);
         _context.API.ChangeQuery(newQuery, requery: true);
         return true;
     }

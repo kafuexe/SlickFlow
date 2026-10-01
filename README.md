@@ -11,7 +11,7 @@ A lightweight productivity plugin for [Flow Launcher](https://github.com/Flow-La
 - 🏷️ **Add, remove, update aliases** directly from Flow
 - 🖼️ **Custom icons** per item (local file or URL)
 - 🔗 **Meta items** — one alias that chains and launches several others
-- 🧩 **Parameterized items** — `<<name>>` placeholders with a guided prompt UX
+- 🧩 **Parameterized items** — `<<name>>` placeholders with a guided prompt UX, plus built-in tokens (`<<$clip>>`, `<<$date>>`, `<<$time>>`, `<<$env:NAME>>`)
 - 🪟 **Window mode** control (normal / minimized / maximized) and working directory
 
 ---
@@ -142,6 +142,45 @@ add serve "python -m http.server <<port=8080>>"
 # Combine with meta items — placeholders from every leaf are collected,
 # deduplicated by name, and prompted in order.
 add devstack @api@@web@
+```
+
+### Built-in tokens
+
+Placeholders whose name starts with `$` are **built-in tokens**. They are filled in automatically at launch time and are never prompted for.
+
+| Token | Resolves to |
+| --- | --- |
+| `<<$clip>>` | Current clipboard text (empty if the clipboard has no text) |
+| `<<$date>>` | Today's date, formatted `yyyy-MM-dd` |
+| `<<$date:FORMAT>>` | Today's date with any [.NET date/time format](https://learn.microsoft.com/dotnet/standard/base-types/custom-date-and-time-format-strings), e.g. `<<$date:yyyyMMdd>>` |
+| `<<$time>>` | Current time, formatted `HH:mm` |
+| `<<$time:FORMAT>>` | Current time with a custom format, e.g. `<<$time:HH-mm-ss>>` |
+| `<<$env:NAME>>` | Value of environment variable `NAME` (empty if unset) |
+
+- Token keywords are case-insensitive (`<<$CLIP>>`, `<<$Date:yyyy>>`); the format after `:` is used as written (`MM` = month, `mm` = minutes).
+- Dates and times are formatted with the invariant culture, so output is the same on every machine.
+- A format cannot contain `<`, `>`, `=` or `|` (the same characters a placeholder name can't contain).
+- An item whose only placeholders are tokens launches **directly**, without prompt mode. An item that mixes tokens and regular placeholders only prompts for the regular ones. This also applies across the leaves of a meta item.
+- All tokens in one launch see the same snapshot: the clipboard is read once, and every leaf of a meta item gets the same `$date`/`$time`.
+- **Unknown tokens are left untouched.** `<<$typo>>`, `<<$env>>` with no name, or `<<$date:%>>` (an invalid format) stay in the launched command literally, so a mistake is visible instead of silently turning into an empty string. Unknown `$` names are never prompted for either.
+
+A token can also be a placeholder's **default**: `<<query=$clip>>` prompts for `query`, pre-filled with the clipboard text (line breaks are flattened to spaces in the search bar). Plain defaults work as before.
+
+```bash
+# Translate whatever is on the clipboard — launches immediately, no prompt
+add tr "https://translate.google.com/?text=<<$clip>>"
+
+# Open today's log file
+add log "notepad C:\logs\<<$date>>.txt"
+
+# Prompt for a search term, pre-filled with the clipboard
+add g "https://google.com/search?q=<<query=$clip|search term>>"
+
+# Mix tokens with regular placeholders — only "name" is prompted for
+add snap notepad "C:\notes\<<$date:yyyyMMdd>>-<<$time:HHmm>>-<<name>>.md"
+
+# Environment variables
+add home explorer "<<$env:USERPROFILE>>"
 ```
 
 ---

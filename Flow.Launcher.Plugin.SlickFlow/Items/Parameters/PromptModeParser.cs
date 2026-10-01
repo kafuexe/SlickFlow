@@ -69,7 +69,12 @@ public static class PromptModeParser
         var sb = new StringBuilder(alias);
         foreach (var (n, v) in filled)
             sb.Append(Separator).Append(n).Append('=').Append(v);
-        sb.Append(Separator).Append(nextName).Append(": ").Append(nextInitial);
+        // The Flow query bar is single-line; a pre-filled value (e.g. multi-line
+        // clipboard text from a $clip default) is flattened to one line.
+        sb.Append(Separator).Append(nextName).Append(": ").Append(FlattenLineBreaks(nextInitial));
         return sb.ToString();
     }
+
+    private static string FlattenLineBreaks(string text) =>
+        text.Replace("\r\n", " ").Replace('\n', ' ').Replace('\r', ' ');
 }
