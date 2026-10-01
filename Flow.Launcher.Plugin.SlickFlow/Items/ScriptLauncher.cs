@@ -10,30 +10,47 @@ public static class ScriptLauncher
 {
     /// <summary>
     /// Python installation configured in settings. May be a python.exe path or the
-    /// installation folder. When empty, .py files fall back to the shell association.
+    /// installation folder. When empty, an interpreter is detected on PATH.
     /// </summary>
     public static string PythonPath { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Run .ps1 scripts with PowerShell 7 (pwsh.exe) instead of Windows PowerShell.
+    /// Falls back to powershell.exe when pwsh isn't installed.
+    /// </summary>
+    public static bool UsePwsh { get; set; }
 
     public record LaunchTarget(string FileName, string Arguments, bool IsScript);
 
     public static LaunchTarget Resolve(string fileName, string arguments) =>
-        Resolve(fileName, arguments, PythonPath);
+        Resolve(fileName, arguments, PythonPath, UsePwsh);
 
-    public static LaunchTarget Resolve(string fileName, string arguments, string? pythonPath)
+    /// <param name="findExecutable">
+    /// Locates an executable by file name, returning its full path or null.
+    /// Defaults to a PATH search; injectable for tests.
+    /// </param>
+    public static LaunchTarget Resolve(
+        string fileName,
+        string arguments,
+        string? pythonPath,
+        bool usePwsh = false,
+        Func<string, string?>? findExecutable = null)
     {
+        findExecutable ??= FindExecutable;
         var extension = Path.GetExtension(fileName).ToLowerInvariant();
 
         switch (extension)
         {
             case ".ps1":
                 return new LaunchTarget(
-                    "powershell.exe",
+                    ResolvePowerShell(usePwsh, findExecutable),
                     Join($"-NoProfile -ExecutionPolicy Bypass -File {Quote(fileName)}", arguments),
                     true);
 
             case ".py":
             case ".pyw":
-                var interpreter = ResolvePythonExecutable(pythonPath, windowless: extension == ".pyw");
+                var interpreter = ResolvePythonExecutable(pythonPath, windowless: extension == ".pyw")
+                    ?? DetectPython(windowless: extension == ".pyw", findExecutable);
                 if (interpreter == null)
                     return new LaunchTarget(fileName, arguments, false);
 
@@ -42,6 +59,19 @@ public static class ScriptLauncher
             default:
                 return new LaunchTarget(fileName, arguments, false);
         }
+    }
+
+    public static string ResolvePowerShell(bool usePwsh, Func<string, string?>? findExecutable = null)
+    {
+        findExecutable ??= FindExecutable;
+        if (usePwsh)
+        {
+            var pwsh = findExecutable("pwsh.exe");
+            if (pwsh != null)
+                return pwsh;
+        }
+
+        return "powershell.exe";
     }
 
     /// <summary>
@@ -79,6 +109,69 @@ public static class ScriptLauncher
         }
 
         return path;
+    }
+
+    /// <summary>
+    /// Finds an installed interpreter when none is configured. Prefers the official
+    /// py launcher (it picks the newest installed Python), then python on PATH.
+    /// </summary>
+    public static string? DetectPython(bool windowless, Func<string, string?>? findExecutable = null)
+    {
+        findExecutable ??= FindExecutable;
+
+        var candidates = windowless
+            ? new[] { "pyw.exe", "py.exe", "pythonw.exe", "python.exe" }
+            : new[] { "py.exe", "python.exe" };
+
+        foreach (var candidate in candidates)
+        {
+            var found = findExecutable(candidate);
+            if (found != null)
+                return found;
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Searches PATH plus well-known install locations for <paramref name="exeName"/>.
+    /// Skips the WindowsApps folder: its python.exe is a Store stub that opens the
+    /// Microsoft Store instead of running anything when Python isn't installed.
+    /// </summary>
+    public static string? FindExecutable(string exeName)
+    {
+        var dirs = (Environment.GetEnvironmentVariable("PATH") ?? string.Empty)
+            .Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries)
+            .Concat(WellKnownDirectories());
+
+        foreach (var dir in dirs)
+        {
+            var trimmed = dir.Trim().Trim('"');
+            if (trimmed.Length == 0 || trimmed.Contains("WindowsApps", StringComparison.OrdinalIgnoreCase))
+                continue;
+
+            try
+            {
+                var candidate = Path.Combine(trimmed, exeName);
+                if (File.Exists(candidate))
+                    return candidate;
+            }
+            catch (ArgumentException)
+            {
+                // Malformed PATH entry - ignore it.
+            }
+        }
+
+        return null;
+    }
+
+    private static IEnumerable<string> WellKnownDirectories()
+    {
+        var programFiles = Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles);
+        var localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+
+        yield return Path.Combine(programFiles, "PowerShell", "7");
+        yield return Path.Combine(localAppData, "Programs", "Python", "Launcher");
     }
 
     private static string Quote(string path) => $"\"{path.Trim('"')}\"";

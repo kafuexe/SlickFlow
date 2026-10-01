@@ -77,7 +77,7 @@ public class ScriptLauncherTests : IDisposable
     [InlineData(@"C:\does\not\exist\python.exe")]
     public void Resolve_Py_WithoutUsableInterpreter_FallsBackToShell(string? pythonPath)
     {
-        var target = ScriptLauncher.Resolve(@"C:\s\tool.py", "a", pythonPath);
+        var target = ScriptLauncher.Resolve(@"C:\s\tool.py", "a", pythonPath, findExecutable: NothingInstalled);
 
         target.FileName.Should().Be(@"C:\s\tool.py");
         target.Arguments.Should().Be("a");
@@ -91,4 +91,98 @@ public class ScriptLauncherTests : IDisposable
 
         target.Should().Be(new ScriptLauncher.LaunchTarget("notepad.exe", "file.txt", false));
     }
+
+    private static string? NothingInstalled(string _) => null;
+
+    private static Func<string, string?> Installed(params string[] exeNames) =>
+        name => exeNames.Contains(name, StringComparer.OrdinalIgnoreCase) ? $@"C:\bin\{name}" : null;
+
+    #region PowerShell selection
+
+    [Fact]
+    public void Resolve_Ps1_DefaultsToWindowsPowerShell_EvenWhenPwshInstalled()
+    {
+        var target = ScriptLauncher.Resolve(@"C:\s\a.ps1", "", null, usePwsh: false, Installed("pwsh.exe"));
+
+        target.FileName.Should().Be("powershell.exe");
+    }
+
+    [Fact]
+    public void Resolve_Ps1_WithPwshEnabled_UsesPwsh()
+    {
+        var target = ScriptLauncher.Resolve(@"C:\s\a.ps1", "x", null, usePwsh: true, Installed("pwsh.exe"));
+
+        target.FileName.Should().Be(@"C:\bin\pwsh.exe");
+        target.Arguments.Should().Be("-NoProfile -ExecutionPolicy Bypass -File \"C:\\s\\a.ps1\" x");
+    }
+
+    [Fact]
+    public void Resolve_Ps1_WithPwshEnabledButMissing_FallsBackToWindowsPowerShell()
+    {
+        var target = ScriptLauncher.Resolve(@"C:\s\a.ps1", "", null, usePwsh: true, NothingInstalled);
+
+        target.FileName.Should().Be("powershell.exe");
+    }
+
+    #endregion
+
+    #region Python auto-detection
+
+    [Fact]
+    public void Resolve_Py_NoConfiguredPath_PrefersPyLauncher()
+    {
+        var target = ScriptLauncher.Resolve(@"C:\s\tool.py", "", null, findExecutable: Installed("py.exe", "python.exe"));
+
+        target.FileName.Should().Be(@"C:\bin\py.exe");
+        target.Arguments.Should().Be("\"C:\\s\\tool.py\"");
+        target.IsScript.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Resolve_Py_NoConfiguredPath_FallsBackToPythonOnPath()
+    {
+        var target = ScriptLauncher.Resolve(@"C:\s\tool.py", "", null, findExecutable: Installed("python.exe"));
+
+        target.FileName.Should().Be(@"C:\bin\python.exe");
+    }
+
+    [Fact]
+    public void Resolve_Pyw_NoConfiguredPath_PrefersWindowlessInterpreter()
+    {
+        ScriptLauncher.Resolve(@"C:\s\gui.pyw", "", null, findExecutable: Installed("pyw.exe", "py.exe"))
+            .FileName.Should().Be(@"C:\bin\pyw.exe");
+        ScriptLauncher.Resolve(@"C:\s\gui.pyw", "", null, findExecutable: Installed("pythonw.exe", "python.exe"))
+            .FileName.Should().Be(@"C:\bin\pythonw.exe");
+    }
+
+    [Fact]
+    public void Resolve_Py_ConfiguredPathWinsOverDetection()
+    {
+        var target = ScriptLauncher.Resolve(@"C:\s\tool.py", "", _pythonDir, findExecutable: Installed("py.exe"));
+
+        target.FileName.Should().Be(Path.Combine(_pythonDir, "python.exe"));
+    }
+
+    [Fact]
+    public void Resolve_Py_InvalidConfiguredPath_FallsBackToDetection()
+    {
+        var target = ScriptLauncher.Resolve(
+            @"C:\s\tool.py", "", @"C:\does\not\exist", findExecutable: Installed("py.exe"));
+
+        target.FileName.Should().Be(@"C:\bin\py.exe");
+    }
+
+    [Fact]
+    public void DetectPython_NothingInstalled_ReturnsNull()
+    {
+        ScriptLauncher.DetectPython(windowless: false, NothingInstalled).Should().BeNull();
+    }
+
+    [Fact]
+    public void FindExecutable_UnknownName_ReturnsNull()
+    {
+        ScriptLauncher.FindExecutable($"slickflow_missing_{Guid.NewGuid():N}.exe").Should().BeNull();
+    }
+
+    #endregion
 }

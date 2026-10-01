@@ -109,6 +109,28 @@ public class SettingsViewModelTests : IDisposable
     }
 
     [Fact]
+    public void PythonPath_RaisesPropertyChanged()
+    {
+        var raised = new List<string>();
+        _vm.PropertyChanged += (_, e) => raised.Add(e.PropertyName!);
+
+        _vm.PythonPath = @"C:\Python312\python.exe";
+
+        raised.Should().Contain("PythonPath");
+    }
+
+    [Fact]
+    public void UsePwsh_RaisesPropertyChanged()
+    {
+        var raised = new List<string>();
+        _vm.PropertyChanged += (_, e) => raised.Add(e.PropertyName!);
+
+        _vm.UsePwsh = !_vm.UsePwsh;
+
+        raised.Should().Contain("UsePwsh");
+    }
+
+    [Fact]
     public void DbFilePath_SameValue_DoesNotRaisePropertyChanged()
     {
         _vm.DbFilePath = "initial";

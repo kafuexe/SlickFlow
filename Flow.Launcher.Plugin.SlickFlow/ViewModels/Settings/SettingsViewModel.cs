@@ -10,6 +10,14 @@ using Flow.Launcher.Plugin.SlickFlow.Utils;
 using Flow.Launcher.Plugin.SlickFlow.ViewModels.Item;
 
 namespace Flow.Launcher.Plugin.SlickFlow.ViewModels.Settings;
+
+public enum ItemSortMode
+{
+    Recent,
+    Name,
+    ExecCount,
+}
+
 public class SettingsViewModel : INotifyPropertyChanged
 {
     private readonly Plugin.SlickFlow.Settings.Settings _settings;
@@ -40,6 +48,26 @@ public class SettingsViewModel : INotifyPropertyChanged
         }
     }
 
+    public static List<KeyValuePair<ItemSortMode, string>> SortOptions { get; } = new()
+    {
+        new(ItemSortMode.Recent, "Recently added"),
+        new(ItemSortMode.Name, "Name"),
+        new(ItemSortMode.ExecCount, "Most executed"),
+    };
+
+    private ItemSortMode _sortMode = ItemSortMode.Recent;
+    public ItemSortMode SortMode
+    {
+        get => _sortMode;
+        set
+        {
+            if (_sortMode == value) return;
+            _sortMode = value;
+            OnPropertyChanged(nameof(SortMode));
+            FilterItems();
+        }
+    }
+
     public SettingsViewModel(ItemRepository repo)
     {
         _settings = SettingsManager.Load();
@@ -55,6 +83,7 @@ public class SettingsViewModel : INotifyPropertyChanged
 
         // Python installation
         _pythonPath = _settings.PythonPath;
+        _usePwsh = _settings.UsePwsh;
 
         // Commands
         SaveCommand = new RelayCommand(_ => Save());
@@ -124,7 +153,7 @@ public class SettingsViewModel : INotifyPropertyChanged
 
     #endregion
 
-    #region Python Properties
+    #region Script Properties
 
     private string _pythonPath = string.Empty;
     public string PythonPath
@@ -135,6 +164,18 @@ public class SettingsViewModel : INotifyPropertyChanged
             if (_pythonPath == value) return;
             _pythonPath = value;
             OnPropertyChanged(nameof(PythonPath));
+        }
+    }
+
+    private bool _usePwsh;
+    public bool UsePwsh
+    {
+        get => _usePwsh;
+        set
+        {
+            if (_usePwsh == value) return;
+            _usePwsh = value;
+            OnPropertyChanged(nameof(UsePwsh));
         }
     }
 
@@ -158,9 +199,11 @@ public class SettingsViewModel : INotifyPropertyChanged
         _settings.DbFilePath = DbFilePath ?? string.Empty;
         _settings.IconDirPath = IconDirPath ?? string.Empty;
         _settings.PythonPath = PythonPath ?? string.Empty;
+        _settings.UsePwsh = UsePwsh;
 
         SettingsManager.Save(_settings);
         ScriptLauncher.PythonPath = _settings.PythonPath;
+        ScriptLauncher.UsePwsh = _settings.UsePwsh;
 
         SavedDbPath = _settings.DbFilePath;
         SavedIconDirPath = _settings.IconDirPath;
@@ -252,6 +295,14 @@ public class SettingsViewModel : INotifyPropertyChanged
             ? _allItems
             : _allItems.Where(i => i.AliasesString
                 .Contains(_searchText, StringComparison.OrdinalIgnoreCase));
+
+        // _allItems is already in "recently added" order.
+        filtered = _sortMode switch
+        {
+            ItemSortMode.Name => filtered.OrderBy(i => i.AliasesString, StringComparer.OrdinalIgnoreCase),
+            ItemSortMode.ExecCount => filtered.OrderByDescending(i => i.ExecCount),
+            _ => filtered,
+        };
 
         // Swap the whole collection so the ListBox gets a single reset
         // instead of one CollectionChanged (and layout pass) per item.

@@ -4,10 +4,15 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:local="clr-namespace:Flow.Launcher.Plugin.SlickFlow.ViewModels.Item"
+             xmlns:global="clr-namespace:"
              mc:Ignorable="d"
              d:DesignHeight="250" d:DesignWidth="600">
+    <UserControl.Resources>
+        <global:InverseBooleanConverter x:Key="InverseBool" />
+    </UserControl.Resources>
     <Grid Margin="8">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -63,7 +68,7 @@
         </Grid>
 
         <!-- Python Interpreter Label -->
-        <TextBlock Grid.Row="4" Grid.Column="0" Text="Python Interpreter (python.exe or install folder):"
+        <TextBlock Grid.Row="4" Grid.Column="0" Text="Python Interpreter (python.exe or install folder; empty = auto-detect):"
                    Margin="0,6,0,0" VerticalAlignment="Center" />
 
         <!-- Python Interpreter Path + Browse -->
@@ -83,8 +88,15 @@
                     Command="{Binding BrowsePythonCommand}" />
         </Grid>
 
+        <!-- PowerShell Version -->
+        <CheckBox Grid.Row="6" Grid.Column="0"
+                  Margin="0,6,0,0"
+                  Content="Run .ps1 scripts with PowerShell 7 (pwsh)"
+                  ToolTip="Falls back to Windows PowerShell when pwsh isn't installed."
+                  IsChecked="{Binding UsePwsh}" />
+
         <!-- Action Buttons -->
-        <StackPanel Grid.Row="6" Grid.Column="0" Orientation="Horizontal" Margin="0,6,0,0">
+        <StackPanel Grid.Row="7" Grid.Column="0" Orientation="Horizontal" Margin="0,6,0,0">
             <Button Content="Save" Width="80" Command="{Binding SaveCommand}" />
             <Button Content="Add Item" Width="90" Margin="6,0,0,0" Command="{Binding AddItemCommand}" />
             <Button Content="Refresh" Width="80" Margin="6,0,0,0" Command="{Binding ReloadItemsCommand}" />
@@ -96,14 +108,56 @@
             FontWeight="Bold"
             Margin="4,4,0,4" />
 
-        <!-- Search Bar -->
-        <TextBox Grid.Row="1" Grid.Column="1"
-                 Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged, Delay=150}"
-                 Margin="4,0,0,4"
-                 VerticalAlignment="Center" />
+        <!-- Search Bar + Sort -->
+        <Grid Grid.Row="1" Grid.Column="1" Margin="4,0,0,4">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <TextBox Grid.Column="0"
+                     Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged, Delay=150}"
+                     VerticalAlignment="Center" />
+
+            <!-- Hit testing is disabled while the popup is open so the click that
+                 dismisses it doesn't immediately toggle it open again. -->
+            <ToggleButton x:Name="SortButton"
+                          Grid.Column="1"
+                          Margin="6,0,0,0"
+                          Padding="6,2"
+                          ToolTip="Sort items"
+                          IsChecked="{Binding IsOpen, ElementName=SortPopup, Mode=TwoWay}"
+                          IsHitTestVisible="{Binding IsOpen, ElementName=SortPopup, Converter={StaticResource InverseBool}}">
+                <TextBlock Text="&#xE8CB;"
+                           FontFamily="Segoe Fluent Icons, Segoe MDL2 Assets"
+                           FontSize="14"
+                           VerticalAlignment="Center" />
+            </ToggleButton>
+
+            <Popup x:Name="SortPopup"
+                   PlacementTarget="{Binding ElementName=SortButton}"
+                   Placement="Bottom"
+                   HorizontalOffset="-110"
+                   StaysOpen="False"
+                   AllowsTransparency="True">
+                <Border Background="{DynamicResource {x:Static SystemColors.WindowBrushKey}}"
+                        BorderBrush="Gray"
+                        BorderThickness="1"
+                        CornerRadius="4"
+                        Padding="4"
+                        MinWidth="140">
+                    <ListBox ItemsSource="{Binding SortOptions}"
+                             SelectedValue="{Binding SortMode}"
+                             SelectedValuePath="Key"
+                             DisplayMemberPath="Value"
+                             BorderThickness="0"
+                             SelectionChanged="SortOption_SelectionChanged" />
+                </Border>
+            </Popup>
+        </Grid>
 
         <!-- Items List -->
-        <ListBox Grid.Row="2" Grid.Column="1" Grid.RowSpan="6"
+        <ListBox Grid.Row="2" Grid.Column="1" Grid.RowSpan="7"
             ItemsSource="{Binding Items}"
             MaxHeight="500"
             HorizontalContentAlignment="Stretch"
