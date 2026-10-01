@@ -95,13 +95,15 @@ public class Item
                     fileName = sysPath;
             }
 
+            var target = IsUrl(fileName)
+                ? new ScriptLauncher.LaunchTarget(fileName, arguments, false)
+                : ScriptLauncher.Resolve(fileName, arguments);
+
             var psi = new ProcessStartInfo
             {
-                FileName = fileName,
-                Arguments = arguments,
-                WorkingDirectory = string.IsNullOrWhiteSpace(WorkingDir)
-                    ? Environment.CurrentDirectory
-                    : WorkingDir,
+                FileName = target.FileName,
+                Arguments = target.Arguments,
+                WorkingDirectory = ResolveWorkingDirectory(fileName, target.IsScript),
                 UseShellExecute = true
             };
 
@@ -122,6 +124,22 @@ public class Item
         {
             Console.WriteLine($"[Error] Failed to execute '{fileName}': {ex.Message}");
         }
+    }
+
+    private string ResolveWorkingDirectory(string fileName, bool isScript)
+    {
+        if (!string.IsNullOrWhiteSpace(WorkingDir))
+            return WorkingDir;
+
+        // Scripts commonly use paths relative to themselves, so run them from their own folder.
+        if (isScript && Path.IsPathRooted(fileName))
+        {
+            var scriptDir = Path.GetDirectoryName(fileName);
+            if (!string.IsNullOrEmpty(scriptDir) && Directory.Exists(scriptDir))
+                return scriptDir;
+        }
+
+        return Environment.CurrentDirectory;
     }
 
     private void ExecuteMetaItem(

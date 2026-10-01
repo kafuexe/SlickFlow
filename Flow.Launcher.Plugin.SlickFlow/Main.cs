@@ -43,6 +43,7 @@ public class SlickFlow : IPlugin, IContextMenu , ISettingProvider
     {
         _context = context;
         Settings = SettingsManager.Load();
+        ScriptLauncher.PythonPath = Settings.PythonPath;
         _iconHelper = new IconHelper(Settings.IconDirPath);
         _itemRepo = new ItemRepository(Settings.DbFilePath);
         _itemValidator = new ItemValidator(_itemRepo, _slickFlowIcon);
