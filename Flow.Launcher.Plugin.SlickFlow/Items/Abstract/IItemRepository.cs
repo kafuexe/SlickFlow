@@ -3,6 +3,8 @@ namespace Flow.Launcher.Plugin.SlickFlow.Items.Abstract;
 public interface IItemRepository
 {
     string AddItem(Item item);
+    /// <summary>Adds several items in one batch (single save) and returns their assigned IDs in order.</summary>
+    IReadOnlyList<string> AddItems(IEnumerable<Item> items);
     Item? GetItemById(string id);
     List<Item> GetAllItems();
     void UpdateItem(Item item);

@@ -20,6 +20,7 @@
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="*" /> <!-- filler -->
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
@@ -102,6 +103,14 @@
             <Button Content="Refresh" Width="80" Margin="6,0,0,0" Command="{Binding ReloadItemsCommand}" />
         </StackPanel>
 
+        <!-- Import -->
+        <StackPanel Grid.Row="8" Grid.Column="0" Orientation="Horizontal" Margin="0,6,0,0">
+            <Button Content="Import from SlickRun (.qrs)…"
+                    Padding="8,0"
+                    ToolTip="Add MagicWords from a SlickRun .qrs/.srl file. Existing items are never changed."
+                    Command="{Binding ImportSlickRunCommand}" />
+        </StackPanel>
+
         <!-- Items Label -->
           <TextBlock Grid.Row="0" Grid.Column="1"
             Text="Items"
@@ -157,7 +166,7 @@
         </Grid>
 
         <!-- Items List -->
-        <ListBox Grid.Row="2" Grid.Column="1" Grid.RowSpan="7"
+        <ListBox Grid.Row="2" Grid.Column="1" Grid.RowSpan="8"
             ItemsSource="{Binding Items}"
             MaxHeight="500"
             HorizontalContentAlignment="Stretch"
