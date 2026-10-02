@@ -1,252 +1,322 @@
-# Flow.Launcher.Plugin.SlickFlow
+# SlickFlow
 
-A lightweight productivity plugin for [Flow Launcher](https://github.com/Flow-Launcher/Flow.Launcher) that lets you create, manage, and launch **custom shortcuts and aliases** for applications, scripts, or files — all from the Flow search bar.
+A [Flow Launcher](https://github.com/Flow-Launcher/Flow.Launcher) plugin that brings **SlickRun-style MagicWords** to Flow: short aliases that launch apps, folders, URLs and scripts, chain several launches together, and prompt you for values when needed.
+
+```bash
+add g "https://google.com/search?q=<<query>>"   # create an alias from the Flow search bar
+g                                               # type it, press Enter, type your search
+```
 
 ---
 
-## 🚀 Features
+## Contents
 
-- 🧠 **Instant search** for custom aliases and app names
-- ⚙️ **Run executables** with arguments and optional admin privileges
-- 🏷️ **Add, remove, update aliases** directly from Flow
-- 🖼️ **Custom icons** per item (local file or URL)
-- 🔗 **Meta items** — one alias that chains and launches several others
-- 🧩 **Parameterized items** — `<<name>>` placeholders with a guided prompt UX, plus built-in tokens (`<<$clip>>`, `<<$date>>`, `<<$time>>`, `<<$env:NAME>>`)
-- 🪟 **Window mode** control (normal / minimized / maximized) and working directory
+- [Getting started](#getting-started)
+- [Commands](#commands)
+- [Advanced features](#advanced-features)
+  - [Scripts (PowerShell and Python)](#scripts-powershell-and-python)
+  - [Meta items: one alias, many launches](#meta-items-one-alias-many-launches)
+  - [Placeholders and prompt mode](#placeholders-and-prompt-mode)
+  - [Built-in tokens](#built-in-tokens)
+  - [Launch options: admin, window, working folder](#launch-options-admin-window-working-folder)
+  - [Icons](#icons)
+  - [Context menu](#context-menu)
+- [Settings window](#settings-window)
+- [Import from SlickRun](#import-from-slickrun)
+- [Examples](#examples)
+
+---
+
+## Getting started
+
+1. Install the plugin into Flow Launcher.
+2. Open Flow and create an item: `add note notepad.exe`
+3. Type `note` and press **Enter**.
+
+SlickFlow has no action keyword, so aliases work straight from the Flow search bar. Exact alias matches rank highest, then aliases that start with what you typed, then close matches.
+
+Any command that targets an existing item accepts **an alias or the item's numeric id**.
 
 ---
 
 ## Commands
 
-> Every command that targets an existing item accepts **either an alias or the item's numeric `id`**.
+| Command | What it does |
+| --- | --- |
+| `add <aliases> <target> [args...] [1]` | Create an item |
+| `alias <item> <aliases>` | Give an existing item more aliases |
+| `remove <alias>` | Remove one alias from its item |
+| `delete <item>` | Delete an item and all its aliases |
+| `update <item> <property> <value> ...` | Change an item's properties |
+| `seticon <item> <path-or-url>` | Set a custom icon |
 
-#### ➕ Add a new item
-
-```bash
-add <alias1|alias2|...> <file-or-url> [args...] [runas]
-```
-
-- Multiple aliases separated by `|`
-- `<file-or-url>` can be an executable, a path, or an `http(s)://` URL
-- Optional `args` are forwarded to the process
-- Optional trailing `runas = 1` runs the item as Administrator
-
-#### 🏷️ Add aliases to an existing item
+### `add`
 
 ```bash
-alias <existing-alias-or-id> <newAlias1|newAlias2|...>
+add <alias1|alias2|...> <target> [args...] [1]
 ```
 
-Adds one or more new aliases to an item that already exists. Duplicates are ignored. Use this when you want a second/third name for an item without re-creating it.
-
-#### 🗑️ Remove a single alias
+- **Aliases**: one or more names separated by `|`. They are stored in lower case.
+- **Target**: an executable, a file, a folder, a URL (`https://…`), a script (`.ps1`, `.py`, `.pyw`) or a [meta item](#meta-items-one-alias-many-launches) chain.
+- **Args**: anything after the target is passed to it as command-line arguments.
+- **`1` at the end** runs the item as Administrator.
 
 ```bash
-remove <alias>
+add code|vsc "C:\Program Files\Microsoft VS Code\Code.exe"
+add admincmd cmd.exe 1
+add yt https://youtube.com
 ```
 
-Deletes the specified alias from its associated item. If the item only has one alias left, use `delete` instead — `remove` refuses to leave an item nameless.
+> Quotes on the command line only group words together and are removed. If an argument itself needs quotes, set it in the [settings window](#settings-window).
 
-#### ❌ Delete an entire item
+### `alias` and `remove`
 
 ```bash
-delete <alias-or-id>
+alias yt tube|video     # yt, tube and video now all open YouTube
+remove video            # drop just that alias
 ```
 
-Removes the item and **all** aliases associated with it.
+`remove` won't remove an item's last alias; use `delete` for that.
 
-#### ✏️ Update item properties
+### `update`
 
 ```bash
-update <alias-or-id> <property> <value> [<property> <value> ...]
+update <item> <property> <value> [<property> <value> ...]
 ```
 
-Updates one or more properties on an existing item. You can pass several `property value` pairs in a single command.
-
-Supported properties:
-
-| Property              | Description                                                          |
-| --------------------- | -------------------------------------------------------------------- |
-| `args` / `arguments`  | Command-line arguments passed to the process                         |
-| `runas`               | `1` = run as Administrator, `0` = normal                             |
-| `startmode`           | Window state: `0` = Normal, `1` = Minimized, `2` = Maximized         |
-| `subtitle`            | Subtitle text shown under the item in Flow results                   |
-| `workingdir` / `workdir` | Working directory for the launched process                        |
-
-> To change the target file/URL itself, `delete` and re-`add` the item (the file path is not editable via `update`).
-
-#### 🖼️ Set a custom icon
+| Property | Values |
+| --- | --- |
+| `args` / `arguments` | Command-line arguments |
+| `runas` | `1` = run as Administrator, `0` = normal |
+| `startmode` | `0` = normal, `1` = minimized, `2` = maximized |
+| `subtitle` | Text shown under the item in Flow |
+| `workingdir` / `workdir` | Folder the program starts in |
 
 ```bash
-seticon <alias-or-id> <icon-path-or-url>
+update yt subtitle "Open YouTube" startmode 2
 ```
 
-Assigns a custom icon to the item. The source can be a local file (e.g. `C:\icons\my.png`) or a URL — the plugin downloads and caches it locally.
+To change an item's target, edit it in the [settings window](#settings-window).
+
+### `seticon`
+
+```bash
+seticon yt https://www.youtube.com/favicon.ico
+seticon notes C:\icons\notes.png
+```
+
+Accepts a local image or a URL. Downloaded icons are cached in the icon folder.
 
 ---
 
-## 🔗 Meta items (alias chains)
+## Advanced features
 
-A **meta item** is an item whose "file" is a list of other aliases wrapped in `@` markers. Launching a meta item executes every alias in the chain (depth-first), so a single keyword can fire off a whole workspace.
+### Scripts (PowerShell and Python)
 
-Syntax:
+Script targets run through their interpreter instead of opening in an editor:
 
-```bash
-add <alias> @<alias1>@@<alias2>@@<alias3>@
-```
-
-Example — one alias that opens your editor, terminal, and browser tab:
-
-```bash
-add work @code@@term@@docs@
-```
-
-Meta items can reference other meta items; the chain is cycle-safe (re-entering an ancestor throws cleanly) and unresolved aliases are reported instead of silently skipped.
-
----
-
-## 🧩 Parameterized items (placeholders)
-
-Embed placeholders inside `FileName` or `arguments` to be prompted for values when launching.
-
-Syntax:
-
-```
-<<name>>
-<<name=default>>
-<<name=default|hint>>
-<<name|hint>>
-```
-
-- `name` — the parameter name (required, cannot contain `< > = |`)
-- `default` — optional default value
-- `hint` — optional hint shown beside the prompt
-
-When you launch a parameterized item, SlickFlow enters **prompt mode**: it rewrites the Flow search bar to a guided template and walks you through each placeholder. Press `Enter` to advance to the next one; press `Enter` on the last placeholder to launch.
-
-Prompt-mode query format (you don't type this by hand — SlickFlow builds it for you):
-
-```
-<alias> | filled1=value1 | filled2=value2 | currentName: your input here
-```
-
-Examples:
+| Extension | Runs with |
+| --- | --- |
+| `.ps1` | Windows PowerShell, or PowerShell 7 (`pwsh`) if enabled in settings. Starts with `-NoProfile -ExecutionPolicy Bypass`. |
+| `.py` | `python.exe` |
+| `.pyw` | `pythonw.exe` (no console window) |
 
 ```bash
-# A parameterized URL — prompts for "query"
+add backup C:\scripts\backup.ps1 -Target D:\
+add rename C:\scripts\rename.py --dry-run
+```
+
+Python is found on `PATH` unless you set a Python interpreter (an exe or an install folder) in [settings](#settings-window). If PowerShell 7 is enabled but not installed, Windows PowerShell is used.
+
+### Meta items: one alias, many launches
+
+A meta item's target is a list of other aliases, each wrapped in `@`:
+
+```bash
+add work @code@@term@@mail@
+```
+
+Typing `work` launches `code`, `term` and `mail` in that order.
+
+- Meta items can include other meta items.
+- A loop (an item that ends up including itself) is stopped with an error instead of running forever.
+- An alias that doesn't exist is reported as an error rather than silently skipped.
+
+### Placeholders and prompt mode
+
+Put `<<name>>` anywhere in a target or its arguments, and SlickFlow asks for a value when you launch:
+
+| Syntax | Meaning |
+| --- | --- |
+| `<<name>>` | Ask for `name` |
+| `<<name=default>>` | Ask, pre-filled with `default` |
+| `<<name\|hint>>` | Ask, showing `hint` as a reminder |
+| `<<name=default\|hint>>` | Both |
+
+A name can't contain `<`, `>`, `=` or `|`.
+
+**How prompting works.** When you launch `g` from the example below, the Flow search bar changes to:
+
+```
+g | query: 
+```
+
+Type the value and press **Enter**. If there are more placeholders, the bar moves on to the next one and keeps what you've filled so far (`g | query=cats | page: `). Pressing **Enter** on the last one launches the item. To cancel, clear the search bar.
+
+```bash
 add g "https://google.com/search?q=<<query|search term>>"
-
-# Defaults: "port" defaults to 8080 unless overridden
-add serve "python -m http.server <<port=8080>>"
-
-# Combine with meta items — placeholders from every leaf are collected,
-# deduplicated by name, and prompted in order.
-add devstack @api@@web@
+add serve python "-m http.server <<port=8080>>"
+add ssh wt "ssh <<user=admin>>@<<host|server name>>"
 ```
+
+A placeholder name that appears more than once is asked for once and filled in everywhere. The same goes for meta items: placeholders from all the items in the chain are collected and asked for once each, so `add stack @api@@web@` asks for a shared `<<port>>` only once.
 
 ### Built-in tokens
 
-Placeholders whose name starts with `$` are **built-in tokens**. They are filled in automatically at launch time and are never prompted for.
+Placeholders that start with `$` are filled in automatically at launch and never asked for:
 
-| Token | Resolves to |
+| Token | Becomes |
 | --- | --- |
-| `<<$clip>>` | Current clipboard text (empty if the clipboard has no text) |
-| `<<$date>>` | Today's date, formatted `yyyy-MM-dd` |
-| `<<$date:FORMAT>>` | Today's date with any [.NET date/time format](https://learn.microsoft.com/dotnet/standard/base-types/custom-date-and-time-format-strings), e.g. `<<$date:yyyyMMdd>>` |
-| `<<$time>>` | Current time, formatted `HH:mm` |
-| `<<$time:FORMAT>>` | Current time with a custom format, e.g. `<<$time:HH-mm-ss>>` |
-| `<<$env:NAME>>` | Value of environment variable `NAME` (empty if unset) |
-
-- Token keywords are case-insensitive (`<<$CLIP>>`, `<<$Date:yyyy>>`); the format after `:` is used as written (`MM` = month, `mm` = minutes).
-- Dates and times are formatted with the invariant culture, so output is the same on every machine.
-- A format cannot contain `<`, `>`, `=` or `|` (the same characters a placeholder name can't contain).
-- An item whose only placeholders are tokens launches **directly**, without prompt mode. An item that mixes tokens and regular placeholders only prompts for the regular ones. This also applies across the leaves of a meta item.
-- All tokens in one launch see the same snapshot: the clipboard is read once, and every leaf of a meta item gets the same `$date`/`$time`.
-- **Unknown tokens are left untouched.** `<<$typo>>`, `<<$env>>` with no name, or `<<$date:%>>` (an invalid format) stay in the launched command literally, so a mistake is visible instead of silently turning into an empty string. Unknown `$` names are never prompted for either.
-
-A token can also be a placeholder's **default**: `<<query=$clip>>` prompts for `query`, pre-filled with the clipboard text (line breaks are flattened to spaces in the search bar). Plain defaults work as before.
+| `<<$clip>>` | Clipboard text (empty if there's none) |
+| `<<$date>>` | Today's date as `yyyy-MM-dd` |
+| `<<$date:FORMAT>>` | Today's date in any [.NET format](https://learn.microsoft.com/dotnet/standard/base-types/custom-date-and-time-format-strings), e.g. `<<$date:dd.MM.yy>>` |
+| `<<$time>>` | Current time as `HH:mm` |
+| `<<$time:FORMAT>>` | Current time in any format, e.g. `<<$time:HH-mm-ss>>` |
+| `<<$env:NAME>>` | Environment variable `NAME` (empty if unset) |
 
 ```bash
-# Translate whatever is on the clipboard — launches immediately, no prompt
-add tr "https://translate.google.com/?text=<<$clip>>"
-
-# Open today's log file
-add log "notepad C:\logs\<<$date>>.txt"
-
-# Prompt for a search term, pre-filled with the clipboard
-add g "https://google.com/search?q=<<query=$clip|search term>>"
-
-# Mix tokens with regular placeholders — only "name" is prompted for
-add snap notepad "C:\notes\<<$date:yyyyMMdd>>-<<$time:HHmm>>-<<name>>.md"
-
-# Environment variables
+add tr "https://translate.google.com/?text=<<$clip>>"      # translate the clipboard, no prompt
+add log notepad "C:\logs\<<$date>>.txt"                    # open today's log
 add home explorer "<<$env:USERPROFILE>>"
 ```
 
----
-
-## 📥 Import from SlickRun
-
-Coming from SlickRun? Open **Flow Launcher → Settings → Plugins → SlickFlow** and click **Import from SlickRun (.qrs)…**. The file picker opens in `%APPDATA%\SlickRun` when it exists; pick your live database (`SlickRun.srl`) or an exported shortcut pack (`*.qrs`) — both use the same format.
-
-The import is **additive**: it only adds new items and never changes or deletes existing ones. A MagicWord whose name already exists as an alias (case-insensitive) is skipped, as are duplicates within the file (first one wins) and entries without a filename. When it finishes you get a summary such as `Imported 42, skipped 3 (alias already exists: g, mail, calc).`
-
-| SlickRun | SlickFlow |
-|---|---|
-| MagicWord (`[NAME]`; `[A,B]` gives two aliases) | Aliases (lower-cased) |
-| Filename | FileName |
-| Parameters (`Params`) | Arguments |
-| Startup Path (`Path`) | WorkingDir |
-| Notes | SubTitle |
-| Run As (`UseRunAs`) | RunAs (elevated only; other accounts fall back to normal) |
-| Start Mode (`StartMode`) | StartMode (normal / minimized / maximized) |
-| Icon | IconPath (copied into the SlickFlow icon folder, only if the file exists) |
-
-SlickRun variables in Filename and Parameters become placeholders:
-
-| SlickRun | SlickFlow | Meaning |
-|---|---|---|
-| `$W$` | `<<query>>` | text typed after the MagicWord |
-| `$I$` | `<<query>>` | same typed text as `$W$` (SlickRun's unencoded variant), so both share one prompt |
-| `$C$` | `<<$clip>>` | clipboard contents |
-
-Any other `$X$` variable is left as-is and listed as a warning in the summary. Note that SlickFlow does not URL-encode placeholder values the way SlickRun does for `$W$`.
-
----
-
-## 📚 Examples
+**Tokens as defaults.** `<<query=$clip>>` asks for `query`, pre-filled with the clipboard text, so you can launch as-is or edit it first:
 
 ```bash
-# Simple shortcuts
+add g "https://google.com/search?q=<<query=$clip|search term>>"
+```
+
+**Mixing.** An item that only uses tokens launches immediately. An item that mixes tokens and normal placeholders only asks for the normal ones:
+
+```bash
+add note notepad "C:\notes\<<$date:yyyyMMdd>>-<<title>>.md"   # asks only for title
+```
+
+Details:
+- Token names are case-insensitive (`<<$CLIP>>` works). Formats are case-sensitive: `MM` is month, `mm` is minutes.
+- Dates and times look the same regardless of your Windows region settings.
+- A format can't contain `<`, `>`, `=` or `|`.
+- Everything in one launch uses the same moment and the same clipboard contents, including every item in a meta chain.
+- A token SlickFlow doesn't recognise, such as `<<$typo>>` or `<<$date:%>>`, is left in the command unchanged, so you can see the mistake.
+- Line breaks in clipboard text become spaces when pre-filled into the search bar.
+
+### Launch options: admin, window, working folder
+
+Each item can:
+- **Run as Administrator**: `add … 1`, `update <item> runas 1`, or the Run As option in settings. You can also run an executable elevated just once from its [context menu](#context-menu).
+- **Start minimized or maximized**: `update <item> startmode 1` (minimized) or `2` (maximized).
+- **Start in a specific folder**: `update <item> workdir "D:\projects"`.
+
+### Icons
+
+SlickFlow picks an icon automatically: the program's own icon for files and executables, and the site's favicon for URLs. Icons are saved to the icon folder (configurable in settings). Use `seticon` to override.
+
+### Context menu
+
+Select an item in Flow and press **Shift+Enter** to open its context menu:
+
+| Action | Shown for |
+| --- | --- |
+| Open File Location | Items that point to an existing file or folder |
+| Run as Administrator | Executables that aren't already set to run as Administrator |
+| Open in Incognito | URLs, opens a private window in your default browser (Chrome, Edge or Firefox) |
+| Open in Terminal / Open in PowerShell | Items that point to an existing file or folder; opens in that folder |
+| Executed N times | All items (usage count) |
+| Aliases | All items, lists every alias |
+
+---
+
+## Settings window
+
+**Flow Launcher → Settings → Plugins → SlickFlow**
+
+Left side:
+- **DB File Path**: where your items are stored. Point it at a synced folder (OneDrive, Dropbox) to share items between PCs.
+- **Icon Folder Path**: where icons are saved.
+- **Python Interpreter**: `python.exe` or an install folder. Leave empty to use the one on `PATH`.
+- **Run .ps1 scripts with PowerShell 7**: use `pwsh` instead of Windows PowerShell.
+- **Save / Add Item / Refresh**, and **Import from SlickRun**.
+- **?** (bottom left): opens this guide.
+
+Right side: every item, with search and sorting (including by most executed). Click **Edit** on an item to change any field, including its target and aliases.
+
+---
+
+## Import from SlickRun
+
+Click **Import from SlickRun (.qrs)…** in the settings window. The file picker opens in `%APPDATA%\SlickRun`. Choose your live MagicWord list (`SlickRun.srl`) or an exported pack (`*.qrs`).
+
+**The import only adds items.** It never changes or deletes anything you already have:
+- A MagicWord whose name you already use as an alias is skipped.
+- A name that appears twice in the file is imported once (the first one wins).
+- Entries without a filename are skipped.
+
+Afterwards you get a summary, e.g. `Imported 42, skipped 3 (alias already exists: g, mail, calc).`
+
+What carries over:
+
+| SlickRun | SlickFlow |
+| --- | --- |
+| MagicWord name (`[A,B]` gives two aliases) | Aliases |
+| Filename | Target |
+| Parameters | Arguments |
+| Startup Path | Working folder |
+| Notes | Subtitle |
+| Run As (elevated) | Run as Administrator. Running as a different user isn't supported and imports as normal. |
+| Start Mode | Normal, minimized or maximized |
+| Icon | Copied into the icon folder, if the file exists |
+
+SlickRun variables become placeholders:
+
+| SlickRun | SlickFlow |
+| --- | --- |
+| `$W$`, `$I$` | `<<query>>` (asked for once) |
+| `$C$` | `<<$clip>>` |
+
+Other `$X$` variables are left as they are and listed in the summary. SlickRun URL-encodes `$W$`; SlickFlow inserts the text as typed.
+
+---
+
+## Examples
+
+```bash
+# Apps and folders
 add note|notepad notepad.exe
-add admincmd cmd.exe "" 1
+add dl explorer "<<$env:USERPROFILE>>\Downloads"
+add admincmd cmd.exe 1
 
-# URLs
-add yt|youtube "https://youtube.com"
-
-# Update properties on an existing item
-update yt args "--new-window"
-update yt subtitle "Open YouTube" startmode 2
-
-# Add another alias to an existing item
-alias yt tube|video
-
-# Custom icon (from a URL)
-seticon yt "https://www.youtube.com/favicon.ico"
-
-# Meta item that fires several aliases at once
-add work @code@@term@@docs@
-
-# Parameterized item with default + hint
+# Websites, including search
+add yt|youtube https://youtube.com
 add gh "https://github.com/search?q=<<query|repo name>>"
+add wiki "https://en.wikipedia.org/wiki/<<topic=$clip>>"
 
-# Cleanup
-remove note
-delete notepad
+# Scripts
+add backup C:\scripts\backup.ps1
+add todo C:\scripts\todo.py "<<task>>"
+
+# A whole workspace in one word
+add work @code@@term@@mail@
+
+# Tweak an item
+update yt subtitle "Open YouTube" startmode 2
+alias yt tube
+seticon yt https://www.youtube.com/favicon.ico
+
+# Clean up
+remove tube
+delete yt
 ```
 
 ---
 
-Author: Kafu
-License: MIT
-Version: 1.0.0
+Author: Kafu · License: MIT · Version 1.0.0

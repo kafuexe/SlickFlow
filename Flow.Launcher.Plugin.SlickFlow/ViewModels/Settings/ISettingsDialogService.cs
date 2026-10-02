@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.IO;
 
 namespace Flow.Launcher.Plugin.SlickFlow.ViewModels.Settings;
@@ -12,6 +13,9 @@ public interface ISettingsDialogService
 
     /// <summary>Shows an informational (or error) message.</summary>
     void ShowMessage(string title, string message, bool isError = false);
+
+    /// <summary>Opens a URL in the default browser.</summary>
+    void OpenUrl(string url);
 }
 
 /// <summary>WinForms-backed implementation used at runtime.</summary>
@@ -37,5 +41,10 @@ public sealed class SettingsDialogService : ISettingsDialogService
     {
         MessageBox.Show(message, title, MessageBoxButtons.OK,
             isError ? MessageBoxIcon.Error : MessageBoxIcon.Information);
+    }
+
+    public void OpenUrl(string url)
+    {
+        Process.Start(new ProcessStartInfo { FileName = url, UseShellExecute = true });
     }
 }

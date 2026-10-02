@@ -71,6 +71,8 @@ public class SettingsViewModel : INotifyPropertyChanged
         }
     }
 
+    public const string ReadmeUrl = "https://github.com/kafuexe/SlickFlow#readme";
+
     /// <param name="repo">The item repository.</param>
     /// <param name="dialogs">Dialog service; defaults to the WinForms implementation.</param>
     /// <param name="slickRunDir">Folder the SlickRun import dialog opens in; defaults to %APPDATA%\SlickRun.</param>
@@ -102,6 +104,7 @@ public class SettingsViewModel : INotifyPropertyChanged
         ReloadItemsCommand = new RelayCommand(_ => ReloadItems());
         AddItemCommand = new RelayCommand(_ => AddItem());
         ImportSlickRunCommand = new RelayCommand(_ => ImportSlickRun());
+        OpenHelpCommand = new RelayCommand(_ => _dialogs.OpenUrl(ReadmeUrl));
         //Items:
         ReloadItems();
 
@@ -200,6 +203,7 @@ public class SettingsViewModel : INotifyPropertyChanged
     public ICommand ReloadItemsCommand { get; }
     public ICommand AddItemCommand { get; }
     public ICommand ImportSlickRunCommand { get; }
+    public ICommand OpenHelpCommand { get; }
 
     #endregion
 

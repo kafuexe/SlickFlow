@@ -22,6 +22,10 @@ public class SettingsViewModelImportTests : IDisposable
 
         public void ShowMessage(string title, string message, bool isError = false)
             => Messages.Add((title, message, isError));
+
+        public List<string> OpenedUrls { get; } = new();
+
+        public void OpenUrl(string url) => OpenedUrls.Add(url);
     }
 
     private readonly string _tempDir;
@@ -50,6 +54,14 @@ public class SettingsViewModelImportTests : IDisposable
         var path = Path.Combine(_tempDir, $"{Guid.NewGuid()}.qrs");
         File.WriteAllText(path, content);
         return path;
+    }
+
+    [Fact]
+    public void OpenHelpCommand_OpensReadme()
+    {
+        CreateVm().OpenHelpCommand.Execute(null);
+
+        _dialogs.OpenedUrls.Should().Equal(SettingsViewModel.ReadmeUrl);
     }
 
     [Fact]

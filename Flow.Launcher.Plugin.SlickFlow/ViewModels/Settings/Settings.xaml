@@ -111,6 +111,44 @@
                     Command="{Binding ImportSlickRunCommand}" />
         </StackPanel>
 
+        <!-- Help: round "?" button pinned to the bottom-left -->
+        <Button Grid.Row="9" Grid.Column="0"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Bottom"
+                Margin="0,8,0,0"
+                Width="26" Height="26"
+                Cursor="Hand"
+                ToolTip="Open the SlickFlow guide (README)"
+                AutomationProperties.Name="Help"
+                Command="{Binding OpenHelpCommand}">
+            <Button.Template>
+                <ControlTemplate TargetType="Button">
+                    <Grid>
+                        <Ellipse x:Name="Circle"
+                                 Fill="Transparent"
+                                 Stroke="{TemplateBinding Foreground}"
+                                 StrokeThickness="1.5"
+                                 Opacity="0.7" />
+                        <TextBlock Text="?"
+                                   FontWeight="Bold"
+                                   FontSize="14"
+                                   Foreground="{TemplateBinding Foreground}"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center" />
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Circle" Property="Opacity" Value="1" />
+                            <Setter TargetName="Circle" Property="Fill" Value="#22808080" />
+                        </Trigger>
+                        <Trigger Property="IsKeyboardFocused" Value="True">
+                            <Setter TargetName="Circle" Property="Opacity" Value="1" />
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Button.Template>
+        </Button>
+
         <!-- Items Label -->
           <TextBlock Grid.Row="0" Grid.Column="1"
             Text="Items"
