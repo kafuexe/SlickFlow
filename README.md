@@ -130,14 +130,18 @@ Python is found on `PATH` unless you set a Python interpreter (an exe or an inst
 
 ### Meta items: one alias, many launches
 
-A meta item's target is a list of other aliases, each wrapped in `@`:
+A meta item's target is a list of things to launch, each wrapped in `@`. Each part can be one of your aliases, or a URL, file, folder or program:
 
 ```bash
 add work @code@@term@@mail@
+add morning @https://news.google.com@@mail@@notepad.exe@
 ```
 
-Typing `work` launches `code`, `term` and `mail` in that order.
+Typing `work` launches `code`, `term` and `mail` in that order. `morning` opens Google News, your `mail` item and Notepad.
 
+- A part that matches an alias always runs that item.
+- Otherwise, a part that looks like a target runs directly: it has a `:` (as in `https:` or `C:`), a `\` or `/`, or a file extension (`notepad.exe`). Direct targets run without arguments.
+- A plain word that isn't an alias, like a typo, is reported as an error rather than launched.
 - Meta items can include other meta items.
 - A loop (an item that ends up including itself) is stopped with an error instead of running forever.
 - An alias that doesn't exist is reported as an error rather than silently skipped.
@@ -285,6 +289,19 @@ SlickRun variables become placeholders:
 
 Other `$X$` variables are left as they are and listed in the summary. SlickRun URL-encodes `$W$`; SlickFlow inserts the text as typed.
 
+SlickRun's built-in commands (a Filename like `@SHUTDOWN@`):
+
+| SlickRun | SlickFlow |
+| --- | --- |
+| `@MULTI@` | A [meta item](#meta-items-one-alias-many-launches) with the same parts: MagicWord names become alias references, URLs and programs stay as they are. `Params="https://news.google.com@MAIL@notepad.exe"` becomes `@https://news.google.com@@mail@@notepad.exe@`. |
+| `@SHUTDOWN@`, `@REBOOT@`, `@LOGOFF@`, `@HIBERNATE@` | `shutdown.exe` with `/s`, `/r`, `/l` or `/h` |
+| `@STANDBY@` | Sleep (or hibernate, if hibernation is enabled), as in SlickRun |
+| `@LOCK@` | Lock the PC |
+| `@SCREENSAVE@` | Start the blank screen saver (`scrnsave.scr`) |
+| Anything else, e.g. `@CALENDAR@` | Skipped and listed in the summary as having no SlickFlow equivalent |
+
+If an `@MULTI@` names a MagicWord that is neither in the file nor already in SlickFlow, it is still imported and the summary warns you.
+
 ---
 
 ## Examples
@@ -319,4 +336,4 @@ delete yt
 
 ---
 
-Author: Kafu · License: MIT · Version 1.0.0
+Author: Kafu · License: MIT · Version 1.1.0

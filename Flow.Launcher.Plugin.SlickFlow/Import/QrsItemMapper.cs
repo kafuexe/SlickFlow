@@ -5,7 +5,8 @@ using Flow.Launcher.Plugin.SlickFlow.Items;
 namespace Flow.Launcher.Plugin.SlickFlow.Import;
 
 /// <summary>Outcome of mapping one <see cref="QrsEntry"/>: either an <see cref="Item"/> or an error.</summary>
-public sealed record QrsMapResult(Item? Item, IReadOnlyList<string> Warnings, string? Error);
+/// <param name="Unsupported">True when the entry is valid in SlickRun but has no SlickFlow equivalent.</param>
+public sealed record QrsMapResult(Item? Item, IReadOnlyList<string> Warnings, string? Error, bool Unsupported = false);
 
 /// <summary>
 /// Maps a SlickRun MagicWord to a SlickFlow <see cref="Item"/>.
@@ -32,11 +33,34 @@ public sealed record QrsMapResult(Item? Item, IReadOnlyList<string> Warnings, st
 /// <item><c>$C$</c> (clipboard contents) → <c>&lt;&lt;$clip&gt;&gt;</c> (built-in token)</item>
 /// <item>Any other <c>$X$</c> is left untouched and reported as a warning.</item>
 /// </list>
+/// <para>SlickRun built-in commands (<c>Filename="@NAME@"</c>):</para>
+/// <list type="bullet">
+/// <item><c>@MULTI@</c> launches every <c>@</c>-separated part of Params. It becomes a meta item: parts that
+/// are MagicWord names become alias references, URLs/paths/programs stay direct targets.</item>
+/// <item>Power and session commands (<c>@SHUTDOWN@</c>, <c>@STANDBY@</c>, ...) become the Windows equivalent,
+/// see <see cref="PowerCommands"/>.</item>
+/// <item>Anything else (e.g. <c>@CALENDAR@</c>, SlickRun's own pop-up) has no equivalent and is unsupported.</item>
+/// </list>
 /// </summary>
 public static class QrsItemMapper
 {
     public const string QueryPlaceholder = "<<query>>";
     public const string ClipboardPlaceholder = "<<$clip>>";
+
+    private static readonly Regex BuiltInPattern = new(@"^@([^@]+)@$", RegexOptions.Compiled);
+
+    private static readonly Dictionary<string, (string FileName, string Arguments)> PowerCommands =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            ["SHUTDOWN"] = ("shutdown.exe", "/s /t 0"),
+            ["REBOOT"] = ("shutdown.exe", "/r /t 0"),
+            ["LOGOFF"] = ("shutdown.exe", "/l"),
+            ["HIBERNATE"] = ("shutdown.exe", "/h"),
+            // Sleeps, or hibernates when hibernation is enabled - the same as SlickRun's own call.
+            ["STANDBY"] = ("rundll32.exe", "powrprof.dll,SetSuspendState 0,1,0"),
+            ["LOCK"] = ("rundll32.exe", "user32.dll,LockWorkStation"),
+            ["SCREENSAVE"] = ("scrnsave.scr", "/s"),
+        };
 
     // $NAME$ where NAME starts with a letter, so "$5" or "$env:PATH" are not treated as variables.
     private static readonly Regex VariablePattern = new(@"\$([A-Za-z][A-Za-z0-9_]*)\$", RegexOptions.Compiled);
@@ -57,11 +81,40 @@ public static class QrsItemMapper
             return new QrsMapResult(null, warnings, "missing Filename");
 
         var unknown = new List<string>();
+        var target = TranslateVariables(fileName, unknown);
+        var arguments = TranslateVariables(entry.Get("Params") ?? string.Empty, unknown);
+
+        var builtIn = BuiltInPattern.Match(fileName);
+        if (builtIn.Success)
+        {
+            var command = builtIn.Groups[1].Value.Trim();
+            if (command.Equals("MULTI", StringComparison.OrdinalIgnoreCase))
+            {
+                var parts = arguments.Split('@', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                    .Select(p => Item.LooksLikeDirectTarget(p) ? p : p.ToLowerInvariant())
+                    .ToList();
+                if (parts.Count == 0)
+                    return new QrsMapResult(null, warnings, "@MULTI@ without any commands in Params");
+
+                target = "@" + string.Join("@@", parts) + "@";
+                arguments = string.Empty;
+            }
+            else if (PowerCommands.TryGetValue(command, out var power))
+            {
+                (target, arguments) = power;
+            }
+            else
+            {
+                return new QrsMapResult(null, warnings,
+                    $"SlickRun built-in {fileName} has no SlickFlow equivalent", Unsupported: true);
+            }
+        }
+
         var item = new Item
         {
             Aliases = aliases,
-            FileName = TranslateVariables(fileName, unknown),
-            Arguments = TranslateVariables(entry.Get("Params") ?? string.Empty, unknown),
+            FileName = target,
+            Arguments = arguments,
             WorkingDir = entry.Get("Path")?.Trim() ?? string.Empty,
             SubTitle = entry.Get("Notes") ?? string.Empty,
             StartMode = MapStartMode(entry.Get("StartMode")),

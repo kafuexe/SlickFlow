@@ -183,6 +183,16 @@ public class Item
     }
 
     /// <summary>
+    /// True when a meta-chain part is a URL, path or file name (has a scheme, a
+    /// path separator, a drive colon or an extension) rather than a plain alias word.
+    /// </summary>
+    internal static bool LooksLikeDirectTarget(string part) =>
+        part.Contains(':')
+        || part.Contains('\\')
+        || part.Contains('/')
+        || !string.IsNullOrEmpty(Path.GetExtension(part));
+
+    /// <summary>
     /// Depth-first traversal of the meta-item alias chain rooted at this item.
     /// Invokes <paramref name="onLeaf"/> for each non-meta item encountered,
     /// and <paramref name="onMetaExit"/> after a meta item's children are visited.
@@ -218,11 +228,16 @@ public class Item
 
             foreach (var alias in aliases)
             {
+                // An alias always wins; otherwise a part that looks like a URL, path or
+                // program is launched directly. Plain words stay unknown aliases so a
+                // typo is reported instead of being run as a file.
                 var target = itemRepo.GetItemByAlias(alias);
-                if (target == null)
-                    missing.Add(alias);
-                else
+                if (target != null)
                     resolved.Add(target);
+                else if (LooksLikeDirectTarget(alias))
+                    resolved.Add(new Item($"{Id}:{alias}", alias));
+                else
+                    missing.Add(alias);
             }
 
             if (missing.Count > 0)

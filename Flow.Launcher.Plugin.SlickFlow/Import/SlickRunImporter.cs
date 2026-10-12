@@ -13,6 +13,8 @@ public enum SkipReason
     Duplicate,
     /// <summary>The entry could not be mapped (e.g. no Filename).</summary>
     Invalid,
+    /// <summary>A SlickRun built-in command with no SlickFlow equivalent (e.g. @CALENDAR@).</summary>
+    Unsupported,
 }
 
 public sealed record SkippedEntry(string Name, SkipReason Reason, string Detail);
@@ -41,6 +43,7 @@ public sealed class SlickRunImportResult
                 (SkipReason.AliasExists, "alias already exists"),
                 (SkipReason.Duplicate, "duplicate in file"),
                 (SkipReason.Invalid, "invalid"),
+                (SkipReason.Unsupported, "no SlickFlow equivalent"),
             }
             .Select(g => (g.Label, Names: Skipped.Where(s => s.Reason == g.Reason).Select(s => s.Name).ToList()))
             .Where(g => g.Names.Count > 0)
@@ -110,7 +113,8 @@ public class SlickRunImporter
             var mapped = QrsItemMapper.Map(entry);
             if (mapped.Item == null)
             {
-                result.Skipped.Add(new SkippedEntry(entry.SectionName, SkipReason.Invalid, mapped.Error ?? "invalid"));
+                var reason = mapped.Unsupported ? SkipReason.Unsupported : SkipReason.Invalid;
+                result.Skipped.Add(new SkippedEntry(entry.SectionName, reason, mapped.Error ?? "invalid"));
                 continue;
             }
 
@@ -144,10 +148,29 @@ public class SlickRunImporter
             result.ImportedAliases.Add(free[0]);
         }
 
+        WarnAboutUnknownChainAliases(toAdd, existing, claimed, result.Warnings);
+
         if (toAdd.Count > 0)
             _repo.AddItems(toAdd);
 
         return result;
+    }
+
+    /// <summary>
+    /// An imported @MULTI@ may name a MagicWord that is neither in this file nor in SlickFlow;
+    /// the chain would fail at launch, so say which ones.
+    /// </summary>
+    private static void WarnAboutUnknownChainAliases(
+        IEnumerable<Item> imported, HashSet<string> existing, HashSet<string> claimed, List<string> warnings)
+    {
+        foreach (var item in imported.Where(i => i.IsMetaItem))
+        {
+            var unknown = item.FileName.Split('@', StringSplitOptions.RemoveEmptyEntries)
+                .Where(p => !Item.LooksLikeDirectTarget(p) && !existing.Contains(p) && !claimed.Contains(p))
+                .ToList();
+            if (unknown.Count > 0)
+                warnings.Add($"{item.Aliases[0]}: @MULTI@ refers to unknown MagicWord(s): {string.Join(", ", unknown)}");
+        }
     }
 
     private string ImportIcon(string sourcePath, string name, List<string> warnings)
