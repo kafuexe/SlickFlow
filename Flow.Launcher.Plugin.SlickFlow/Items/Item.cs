@@ -48,20 +48,33 @@ public class Item
     }
     private static readonly Regex MetaItemPattern = new(@"^(@[^@]+@)+$", RegexOptions.Compiled);
     private static readonly Regex AliasExtractor = new(@"@([^@]+)@", RegexOptions.Compiled);
+    private static readonly IReadOnlyDictionary<string, string> EmptyValues = new Dictionary<string, string>();
 
     public bool IsMetaItem => MetaItemPattern.IsMatch(FileName ?? string.Empty);
 
+    /// <summary>
+    /// True when the item has placeholders the user must be prompted for.
+    /// Built-in tokens (<c>&lt;&lt;$clip&gt;&gt;</c>, ...) resolve automatically
+    /// and don't count.
+    /// </summary>
     public bool IsParameterized =>
-        PlaceholderParser.ContainsPlaceholders(FileName)
-        || PlaceholderParser.ContainsPlaceholders(Arguments);
+        PlaceholderParser.Extract(FileName)
+            .Concat(PlaceholderParser.Extract(Arguments))
+            .Any(p => !BuiltInTokens.IsToken(p.Name));
 
-    public Item Substitute(IReadOnlyDictionary<string, string> values)
+    /// <summary>
+    /// Returns a copy with placeholders replaced by <paramref name="values"/> and
+    /// built-in tokens resolved against <paramref name="tokens"/> (the real
+    /// clipboard/clock/environment when omitted).
+    /// </summary>
+    public Item Substitute(IReadOnlyDictionary<string, string> values, ITokenSources? tokens = null)
     {
+        tokens ??= new CachingTokenSources(SystemTokenSources.Instance);
         return new Item
         {
             Id = Id,
-            FileName = PlaceholderParser.Substitute(FileName, values),
-            Arguments = PlaceholderParser.Substitute(Arguments, values),
+            FileName = PlaceholderParser.Substitute(FileName, values, tokens),
+            Arguments = PlaceholderParser.Substitute(Arguments, values, tokens),
             SubTitle = SubTitle,
             RunAs = RunAs,
             StartMode = StartMode,
@@ -75,16 +88,23 @@ public class Item
     public void Execute(
         bool forceAdminExec = false,
         IItemRepository? itemRepo = null,
-        IReadOnlyDictionary<string, string>? values = null)
+        IReadOnlyDictionary<string, string>? values = null,
+        ITokenSources? tokens = null)
     {
+        // One snapshot per launch: the clipboard is read at most once and every
+        // meta-chain leaf sees the same $date/$time.
+        var snapshot = tokens as CachingTokenSources
+            ?? new CachingTokenSources(tokens ?? SystemTokenSources.Instance);
+
         if (IsMetaItem)
         {
-            ExecuteMetaItem(forceAdminExec, itemRepo, values);
+            ExecuteMetaItem(forceAdminExec, itemRepo, values, snapshot);
             return;
         }
 
-        var fileName = values != null ? PlaceholderParser.Substitute(FileName, values) : FileName;
-        var arguments = values != null ? PlaceholderParser.Substitute(Arguments, values) : Arguments;
+        var substituted = Substitute(values ?? EmptyValues, snapshot);
+        var fileName = substituted.FileName;
+        var arguments = substituted.Arguments;
 
         try
         {
@@ -95,13 +115,15 @@ public class Item
                     fileName = sysPath;
             }
 
+            var target = IsUrl(fileName)
+                ? new ScriptLauncher.LaunchTarget(fileName, arguments, false)
+                : ScriptLauncher.Resolve(fileName, arguments);
+
             var psi = new ProcessStartInfo
             {
-                FileName = fileName,
-                Arguments = arguments,
-                WorkingDirectory = string.IsNullOrWhiteSpace(WorkingDir)
-                    ? Environment.CurrentDirectory
-                    : WorkingDir,
+                FileName = target.FileName,
+                Arguments = target.Arguments,
+                WorkingDirectory = ResolveWorkingDirectory(fileName, target.IsScript),
                 UseShellExecute = true
             };
 
@@ -124,10 +146,27 @@ public class Item
         }
     }
 
+    private string ResolveWorkingDirectory(string fileName, bool isScript)
+    {
+        if (!string.IsNullOrWhiteSpace(WorkingDir))
+            return WorkingDir;
+
+        // Scripts commonly use paths relative to themselves, so run them from their own folder.
+        if (isScript && Path.IsPathRooted(fileName))
+        {
+            var scriptDir = Path.GetDirectoryName(fileName);
+            if (!string.IsNullOrEmpty(scriptDir) && Directory.Exists(scriptDir))
+                return scriptDir;
+        }
+
+        return Environment.CurrentDirectory;
+    }
+
     private void ExecuteMetaItem(
         bool forceAdminExec,
         IItemRepository? itemRepo,
-        IReadOnlyDictionary<string, string>? values)
+        IReadOnlyDictionary<string, string>? values,
+        ITokenSources tokens)
     {
         if (itemRepo == null)
             throw new InvalidOperationException("Meta items require an item repository to resolve alias references.");
@@ -137,7 +176,7 @@ public class Item
         WalkMetaChain(itemRepo, new HashSet<Item>(), leaves.Add, metas.Add);
 
         foreach (var leaf in leaves)
-            leaf.Execute(forceAdminExec, itemRepo, values);
+            leaf.Execute(forceAdminExec, itemRepo, values, tokens);
 
         foreach (var meta in metas)
             meta.ExecCount++;

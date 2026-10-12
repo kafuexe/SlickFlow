@@ -8,6 +8,8 @@ public class Settings
 {
   public string DbFilePath { get; set; } = string.Empty;
   public string IconDirPath { get; set; } = string.Empty;
+  public string PythonPath { get; set; } = string.Empty;
+  public bool UsePwsh { get; set; } = false;
 
 }
 

@@ -5,6 +5,8 @@ namespace Flow.Launcher.Plugin.SlickFlow.Items.Parameters;
 /// <summary>
 /// Resolves the ordered, deduplicated set of placeholders that need to be
 /// filled before an item (or a meta-item chain) can be executed.
+/// Built-in tokens (names starting with <c>$</c>) resolve automatically at
+/// launch and are never part of the schema.
 /// </summary>
 public static class PlaceholderSchema
 {
@@ -26,7 +28,7 @@ public static class PlaceholderSchema
         void AddDistinct(IEnumerable<Placeholder> placeholders)
         {
             foreach (var ph in placeholders)
-                if (seenNames.Add(ph.Name))
+                if (!BuiltInTokens.IsToken(ph.Name) && seenNames.Add(ph.Name))
                     result.Add(ph);
         }
 

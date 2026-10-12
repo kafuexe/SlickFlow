@@ -130,4 +130,22 @@ public class ItemRepositoryTests : IDisposable
         var reloaded = new ItemRepository(_dbPath);
         reloaded.GetAllItems().Should().HaveCount(1);
     }
+
+    [Fact]
+    public void AddItems_AssignsUniqueIdsKeepsOrderAndPersists()
+    {
+        var repo = new ItemRepository(_dbPath);
+        repo.AddItem(new Item { FileName = "existing.exe", Aliases = new List<string> { "e" } });
+
+        var ids = repo.AddItems(new[]
+        {
+            new Item { FileName = "a.exe", Aliases = new List<string> { "a" } },
+            new Item { FileName = "b.exe", Aliases = new List<string> { "b" } },
+        });
+
+        ids.Should().HaveCount(2).And.OnlyHaveUniqueItems();
+        ids.Should().AllSatisfy(id => id.Should().NotBeNullOrEmpty());
+        var reloaded = new ItemRepository(_dbPath).GetAllItems();
+        reloaded.Select(i => i.FileName).Should().Equal("existing.exe", "a.exe", "b.exe");
+    }
 }

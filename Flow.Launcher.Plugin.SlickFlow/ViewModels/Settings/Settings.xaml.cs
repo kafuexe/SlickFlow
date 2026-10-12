@@ -18,4 +18,11 @@ public partial class SettingsView
         DataContext = new SettingsViewModel(repo);
 
     }
+
+    private void SortOption_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        // Close the popout once the user picks an option (ignore the initial binding).
+        if (e.AddedItems.Count > 0 && e.RemovedItems.Count > 0)
+            SortPopup.IsOpen = false;
+    }
 }

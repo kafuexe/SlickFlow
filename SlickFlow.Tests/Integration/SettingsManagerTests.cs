@@ -58,6 +58,30 @@ public class SettingsManagerTests : IDisposable
     }
 
     [Fact]
+    public void SaveAndReload_PreservesScriptSettings()
+    {
+        var settings = new Settings
+        {
+            PythonPath = @"C:\Python312\python.exe",
+            UsePwsh = true
+        };
+        SettingsManager.Save(settings, _tempDir);
+        var reloaded = SettingsManager.Load(_tempDir);
+        reloaded.PythonPath.Should().Be(settings.PythonPath);
+        reloaded.UsePwsh.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Load_FileWithoutScriptSettings_DefaultsToAutoDetectAndWindowsPowerShell()
+    {
+        var settingsPath = Path.Combine(_tempDir, "settings.json");
+        File.WriteAllText(settingsPath, "{ \"DbFilePath\": \"\", \"IconDirPath\": \"\" }");
+        var settings = SettingsManager.Load(_tempDir);
+        settings.PythonPath.Should().BeEmpty();
+        settings.UsePwsh.Should().BeFalse();
+    }
+
+    [Fact]
     public void Load_CorruptedFile_ReturnsDefaults()
     {
         var settingsPath = Path.Combine(_tempDir, "settings.json");

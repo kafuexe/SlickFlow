@@ -4,18 +4,39 @@ using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using System.Windows.Input;
+using Flow.Launcher.Plugin.SlickFlow.Import;
 using Flow.Launcher.Plugin.SlickFlow.Items;
 using Flow.Launcher.Plugin.SlickFlow.Settings;
 using Flow.Launcher.Plugin.SlickFlow.Utils;
 using Flow.Launcher.Plugin.SlickFlow.ViewModels.Item;
 
 namespace Flow.Launcher.Plugin.SlickFlow.ViewModels.Settings;
+
+public enum ItemSortMode
+{
+    Recent,
+    Name,
+    ExecCount,
+}
+
 public class SettingsViewModel : INotifyPropertyChanged
 {
     private readonly Plugin.SlickFlow.Settings.Settings _settings;
     private readonly ItemRepository _repo;
+    private readonly ISettingsDialogService _dialogs;
+    private readonly string _slickRunDir;
     private List<ItemViewModel> _allItems = new();
-    public ObservableCollection<ItemViewModel> Items { get; } = new();
+
+    private ObservableCollection<ItemViewModel> _items = new();
+    public ObservableCollection<ItemViewModel> Items
+    {
+        get => _items;
+        private set
+        {
+            _items = value;
+            OnPropertyChanged(nameof(Items));
+        }
+    }
 
     private string _searchText = string.Empty;
     public string SearchText
@@ -30,10 +51,38 @@ public class SettingsViewModel : INotifyPropertyChanged
         }
     }
 
-    public SettingsViewModel(ItemRepository repo)
+    public static List<KeyValuePair<ItemSortMode, string>> SortOptions { get; } = new()
+    {
+        new(ItemSortMode.Recent, "Recently added"),
+        new(ItemSortMode.Name, "Name"),
+        new(ItemSortMode.ExecCount, "Most executed"),
+    };
+
+    private ItemSortMode _sortMode = ItemSortMode.Recent;
+    public ItemSortMode SortMode
+    {
+        get => _sortMode;
+        set
+        {
+            if (_sortMode == value) return;
+            _sortMode = value;
+            OnPropertyChanged(nameof(SortMode));
+            FilterItems();
+        }
+    }
+
+    public const string ReadmeUrl = "https://github.com/kafuexe/SlickFlow#readme";
+
+    /// <param name="repo">The item repository.</param>
+    /// <param name="dialogs">Dialog service; defaults to the WinForms implementation.</param>
+    /// <param name="slickRunDir">Folder the SlickRun import dialog opens in; defaults to %APPDATA%\SlickRun.</param>
+    public SettingsViewModel(ItemRepository repo, ISettingsDialogService? dialogs = null, string? slickRunDir = null)
     {
         _settings = SettingsManager.Load();
         _repo = repo;
+        _dialogs = dialogs ?? new SettingsDialogService();
+        _slickRunDir = slickRunDir ?? Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "SlickRun");
 
         // DB file
         _dbFilePath = _settings.DbFilePath;
@@ -43,12 +92,19 @@ public class SettingsViewModel : INotifyPropertyChanged
         _iconDirPath = _settings.IconDirPath ;
         SavedIconDirPath = _settings.IconDirPath ;
 
+        // Python installation
+        _pythonPath = _settings.PythonPath;
+        _usePwsh = _settings.UsePwsh;
+
         // Commands
         SaveCommand = new RelayCommand(_ => Save());
         BrowseDbFolderCommand = new RelayCommand(_ => BrowseDbFile());
         BrowseIconFolderCommand = new RelayCommand(_ => BrowseIconFolder());
+        BrowsePythonCommand = new RelayCommand(_ => BrowsePython());
         ReloadItemsCommand = new RelayCommand(_ => ReloadItems());
         AddItemCommand = new RelayCommand(_ => AddItem());
+        ImportSlickRunCommand = new RelayCommand(_ => ImportSlickRun());
+        OpenHelpCommand = new RelayCommand(_ => _dialogs.OpenUrl(ReadmeUrl));
         //Items:
         ReloadItems();
 
@@ -110,13 +166,44 @@ public class SettingsViewModel : INotifyPropertyChanged
 
     #endregion
 
+    #region Script Properties
+
+    private string _pythonPath = string.Empty;
+    public string PythonPath
+    {
+        get => _pythonPath;
+        set
+        {
+            if (_pythonPath == value) return;
+            _pythonPath = value;
+            OnPropertyChanged(nameof(PythonPath));
+        }
+    }
+
+    private bool _usePwsh;
+    public bool UsePwsh
+    {
+        get => _usePwsh;
+        set
+        {
+            if (_usePwsh == value) return;
+            _usePwsh = value;
+            OnPropertyChanged(nameof(UsePwsh));
+        }
+    }
+
+    #endregion
+
     #region Commands
 
     public ICommand SaveCommand { get; }
     public ICommand BrowseDbFolderCommand { get; }
     public ICommand BrowseIconFolderCommand { get; }
+    public ICommand BrowsePythonCommand { get; }
     public ICommand ReloadItemsCommand { get; }
     public ICommand AddItemCommand { get; }
+    public ICommand ImportSlickRunCommand { get; }
+    public ICommand OpenHelpCommand { get; }
 
     #endregion
 
@@ -126,11 +213,39 @@ public class SettingsViewModel : INotifyPropertyChanged
     {
         _settings.DbFilePath = DbFilePath ?? string.Empty;
         _settings.IconDirPath = IconDirPath ?? string.Empty;
+        _settings.PythonPath = PythonPath ?? string.Empty;
+        _settings.UsePwsh = UsePwsh;
 
         SettingsManager.Save(_settings);
+        ScriptLauncher.PythonPath = _settings.PythonPath;
+        ScriptLauncher.UsePwsh = _settings.UsePwsh;
 
         SavedDbPath = _settings.DbFilePath;
         SavedIconDirPath = _settings.IconDirPath;
+    }
+
+    private void BrowsePython()
+    {
+        try
+        {
+            using var dlg = new OpenFileDialog
+            {
+                Title = "Select python.exe",
+                Filter = "Python interpreter (python.exe)|python.exe|Executables (*.exe)|*.exe",
+                FileName = "python.exe"
+            };
+
+            if (!string.IsNullOrWhiteSpace(PythonPath))
+            {
+                var dir = Directory.Exists(PythonPath) ? PythonPath : Path.GetDirectoryName(PythonPath);
+                if (!string.IsNullOrEmpty(dir) && Directory.Exists(dir))
+                    dlg.InitialDirectory = dir;
+            }
+
+            if (dlg.ShowDialog() == DialogResult.OK)
+                PythonPath = dlg.FileName;
+        }
+        catch { }
     }
 
     private void BrowseDbFile()
@@ -191,14 +306,22 @@ public class SettingsViewModel : INotifyPropertyChanged
 
     private void FilterItems()
     {
-        Items.Clear();
         var filtered = string.IsNullOrWhiteSpace(_searchText)
             ? _allItems
             : _allItems.Where(i => i.AliasesString
-                .Contains(_searchText, StringComparison.OrdinalIgnoreCase))
-                .ToList();
-        foreach (var item in filtered)
-            Items.Add(item);
+                .Contains(_searchText, StringComparison.OrdinalIgnoreCase));
+
+        // _allItems is already in "recently added" order.
+        filtered = _sortMode switch
+        {
+            ItemSortMode.Name => filtered.OrderBy(i => i.AliasesString, StringComparer.OrdinalIgnoreCase),
+            ItemSortMode.ExecCount => filtered.OrderByDescending(i => i.ExecCount),
+            _ => filtered,
+        };
+
+        // Swap the whole collection so the ListBox gets a single reset
+        // instead of one CollectionChanged (and layout pass) per item.
+        Items = new ObservableCollection<ItemViewModel>(filtered);
     }
 
     private void AddItem()
@@ -224,6 +347,34 @@ public class SettingsViewModel : INotifyPropertyChanged
         _repo.AddItem(newItem);
         ReloadItems();
 
+    }
+
+    /// <summary>
+    /// Additively imports SlickRun MagicWords from a user-picked .qrs / .srl file, refreshes the
+    /// list once (a single collection swap, see <see cref="FilterItems"/>) and shows a summary.
+    /// </summary>
+    private void ImportSlickRun()
+    {
+        var initialDir = Directory.Exists(_slickRunDir) ? _slickRunDir : null;
+        var path = _dialogs.PickSlickRunFile(initialDir);
+        if (string.IsNullOrEmpty(path))
+            return;
+
+        SlickRunImportResult result;
+        try
+        {
+            result = new SlickRunImporter(_repo, _settings.IconDirPath).ImportFile(path);
+        }
+        catch (Exception ex)
+        {
+            _dialogs.ShowMessage("Import from SlickRun", $"Could not import '{path}':{Environment.NewLine}{ex.Message}", isError: true);
+            return;
+        }
+
+        if (result.ImportedCount > 0)
+            ReloadItems();
+
+        _dialogs.ShowMessage("Import from SlickRun", result.ToSummary());
     }
 
     #endregion

@@ -37,6 +37,26 @@ public class ItemRepository : IItemRepository
     }
 
     /// <summary>
+    /// Adds several items, assigning each a new ID, and persists them with a single save.
+    /// </summary>
+    /// <param name="items">The items to add, in order.</param>
+    /// <returns>The IDs assigned to the added items, in the same order.</returns>
+    public IReadOnlyList<string> AddItems(IEnumerable<Item> items)
+    {
+        var ids = new List<string>();
+        foreach (var item in items)
+        {
+            item.Id = Guid.NewGuid().ToString();
+            _items.Add(item);
+            ids.Add(item.Id);
+        }
+
+        if (ids.Count > 0)
+            Save();
+        return ids;
+    }
+
+    /// <summary>
     /// Retrieves the item with the specified ID.
     /// </summary>
     /// <param name="id">The unique identifier of the item to retrieve.</param>

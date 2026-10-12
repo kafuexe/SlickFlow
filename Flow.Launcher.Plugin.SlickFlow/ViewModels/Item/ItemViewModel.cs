@@ -32,8 +32,6 @@ public class ItemViewModel : INotifyPropertyChanged
         _originalItem = item;
         _editingCopy = CloneItem(item);
 
-        LoadIcon(_originalItem.IconPath);
-
         Aliases = new ObservableCollection<string>(_editingCopy.Aliases);
         Aliases.CollectionChanged += (s, e) => OnPropertyChanged(nameof(AliasesString));
         EditCommand = new RelayCommand(_ => BeginEdit(), _ => !IsEditing);
@@ -168,10 +166,20 @@ public class ItemViewModel : INotifyPropertyChanged
     }
 
     private ImageSource? _icon;
+    private bool _iconLoaded;
 
+    // Loaded lazily so only items the virtualized list actually shows pay for decoding.
     public ImageSource? Icon
     {
-        get => _icon;
+        get
+        {
+            if (!_iconLoaded)
+            {
+                _icon = ReadIcon(_originalItem.IconPath);
+                _iconLoaded = true;
+            }
+            return _icon;
+        }
         private set
         {
             if (_icon == value)
@@ -219,7 +227,8 @@ public class ItemViewModel : INotifyPropertyChanged
         _repository.UpdateItem(_editingCopy);
         _originalItem = CloneItem(_editingCopy);
         RefreshAllProperties();
-        LoadIcon(_originalItem.IconPath);
+        Icon = ReadIcon(_originalItem.IconPath);
+        _iconLoaded = true;
         IsEditing = false;
 
     }
@@ -308,24 +317,29 @@ public class ItemViewModel : INotifyPropertyChanged
         OnPropertyChanged(nameof(ExecCount));
 
     }
-    private void LoadIcon(string path)
+    private static ImageSource? ReadIcon(string path)
     {
         if (!File.Exists(path))
+            return null;
+
+        try
         {
-            Icon = null;
-            return;
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+
+            var bitmap = new BitmapImage();
+            bitmap.BeginInit();
+            bitmap.CacheOption = BitmapCacheOption.OnLoad; // key part
+            bitmap.DecodePixelWidth = 32; // matches the displayed size; avoids decoding full-res images
+            bitmap.StreamSource = stream;
+            bitmap.EndInit();
+            bitmap.Freeze();
+
+            return bitmap;
         }
-
-        using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
-
-        var bitmap = new BitmapImage();
-        bitmap.BeginInit();
-        bitmap.CacheOption = BitmapCacheOption.OnLoad; // key part
-        bitmap.StreamSource = stream;
-        bitmap.EndInit();
-        bitmap.Freeze();
-
-        Icon = bitmap;
+        catch
+        {
+            return null;
+        }
     }
 
     #endregion

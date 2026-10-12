@@ -14,11 +14,27 @@ public class PromptModeHandler
 {
     private readonly IItemRepository _repo;
     private readonly IPublicAPI _api;
+    private readonly ITokenSources _tokens;
 
-    public PromptModeHandler(IItemRepository repo, IPublicAPI api)
+    public PromptModeHandler(IItemRepository repo, IPublicAPI api, ITokenSources? tokens = null)
     {
         _repo = repo;
         _api = api;
+        _tokens = tokens ?? SystemTokenSources.Instance;
+    }
+
+    /// <summary>
+    /// Builds the query that enters prompt mode for <paramref name="alias"/>,
+    /// pre-filling the first prompt with its default (resolving token defaults
+    /// such as <c>$clip</c>).
+    /// </summary>
+    public static string FormatEntryQuery(string alias, Placeholder first, ITokenSources tokens)
+    {
+        return PromptModeParser.Format(
+            alias,
+            filled: Array.Empty<(string, string)>(),
+            nextName: first.Name,
+            nextInitial: BuiltInTokens.ResolveDefault(first.Default, tokens) ?? "");
     }
 
     public List<Result> BuildResults(PromptModeState state)
@@ -51,7 +67,7 @@ public class PromptModeHandler
 
         var title = item.IsMetaItem
             ? $"{state.Alias} (chain)"
-            : PlaceholderParser.Substitute(item.FileName, values);
+            : PlaceholderParser.Substitute(item.FileName, values, new CachingTokenSources(_tokens));
 
         var ph = schema[currentIndex];
         var hint = string.IsNullOrEmpty(ph.Hint) ? "" : $" ({ph.Hint})";
@@ -87,7 +103,7 @@ public class PromptModeHandler
         {
             try
             {
-                item.Execute(itemRepo: _repo, values: values);
+                item.Execute(itemRepo: _repo, values: values, tokens: _tokens);
                 _repo.UpdateItem(item);
             }
             catch (Exception ex)
@@ -106,7 +122,7 @@ public class PromptModeHandler
             state.Alias,
             newFilled,
             next.Name,
-            next.Default ?? "");
+            BuiltInTokens.ResolveDefault(next.Default, _tokens) ?? "");
         _api.ChangeQuery(newQuery, requery: true);
         return false;
     }
