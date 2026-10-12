@@ -336,4 +336,4 @@ delete yt
 
 ---
 
-Author: Kafu · License: MIT · Version 1.0.0
+Author: Kafu · License: MIT · Version 1.1.0

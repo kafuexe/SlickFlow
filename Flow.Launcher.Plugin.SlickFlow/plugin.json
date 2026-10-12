@@ -4,7 +4,7 @@
   "Name": "SlickFlow",
   "Description": "Add Slickrun like commands to FlowLauncher",
   "Author": "Kafu",
-  "Version": "1.0.0",
+  "Version": "1.1.0",
   "Language": "csharp",
   "Website": "https://github.com/kafuexe/SlickFlow",
   "IcoPath": "icon.ico",
